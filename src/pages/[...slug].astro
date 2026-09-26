@@ -8,7 +8,7 @@ import { pageTree, source } from "@/lib/source";
 import { getPageImageUrl } from "@/lib/shared";
 import Layout from "@/components/layout.astro";
 import type { TOCItemType } from "fumadocs-core/toc";
-import { githubUrl, markdownUrl } from "@/lib/llms";
+import { markdownUrl } from "@/lib/llms";
 
 interface Props {
   page: CollectionEntry<"docs">;
@@ -46,7 +46,6 @@ const toc: TOCItemType[] = headings.map((heading) => ({
       description: page.data.description,
       hero: isHome,
       markdownUrl: markdownUrl(docsPage),
-      githubUrl: githubUrl(docsPage),
     }}
     client:load
   >

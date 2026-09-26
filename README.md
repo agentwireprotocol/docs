@@ -10,7 +10,7 @@ For LLMs and agents, following [Fumadocs' LLM integration](https://www.fumadocs.
 - `/llms-full.txt`: every page as Markdown, in one file.
 - `/<page>.md` (`/index.md` for the home page): one page as Markdown.
 - Any page URL requested with `Accept: text/markdown` returns the Markdown too. `negotiate.mjs` does this, in front of Astro: `server.mjs` in production, a Vite middleware in dev.
-- Each page has **Copy Markdown** and an **Open** menu (GitHub, Markdown, ChatGPT, Claude, Cursor, Scira).
+- Each page has a **Copy Markdown** button.
 
 ## Develop
 

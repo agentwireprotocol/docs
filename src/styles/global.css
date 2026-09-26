@@ -240,7 +240,7 @@ h4 {
   color: var(--ink-2);
 }
 
-/* Copy Markdown and the Open menu (components/page-header.tsx). */
+/* Copy Markdown (components/page-header.tsx). */
 .page-actions {
   display: flex;
   flex-wrap: wrap;

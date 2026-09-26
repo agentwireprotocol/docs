@@ -16,18 +16,12 @@ import { source } from './source';
 
 // astro.config.mjs `site`.
 export const siteUrl = import.meta.env.SITE.replace(/\/$/, '');
-export const docsRepoUrl = 'https://github.com/hollerprotocol/docs';
 
 type Page = ReturnType<typeof source.getPages>[number];
 
 /** The page's Markdown URL: /index.md for the home page, /guides/watching.md for the rest. */
 export function markdownUrl(page: { slugs: string[] }) {
   return `/${page.slugs.length > 0 ? page.slugs.join('/') : 'index'}.md`;
-}
-
-/** The page's source file in the docs repository. */
-export function githubUrl(page: Page) {
-  return `${docsRepoUrl}/blob/main/content/docs/${page.path}`;
 }
 
 function attr(node: MdxJsxFlowElement, name: string) {
