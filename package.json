@@ -21,6 +21,7 @@
     "clsx": "^2.1.1",
     "fumadocs-core": "16.15.14",
     "fumadocs-ui": "npm:@fumadocs/base-ui@16.15.14",
+    "loading-dev": "^0.3.4",
     "lucide-react": "^1.48.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
@@ -33,6 +34,8 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "compression": "^1.8.1",
+    "shadcn": "^4.21.0",
     "tailwindcss": "^4.3.3"
   }
 }

@@ -4,6 +4,7 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import mdx from '@astrojs/mdx';
 import node from '@astrojs/node';
+import compression from 'compression';
 import { unified } from '@astrojs/markdown-remark';
 import {
   rehypeCode,
@@ -20,6 +21,22 @@ const remarkPlugins = [
   [remarkStructure, { exportAs: 'structuredData' }],
 ];
 const rehypePlugins = [rehypeCode];
+
+// Gzip the dev server's responses. Dev serves unbundled, unminified modules,
+// megabytes of JavaScript per page, which crawl over a remote connection such
+// as `sprite proxy`. The search endpoint streams its results, so it is left
+// alone.
+function compressDev() {
+  return {
+    name: 'holler-docs:compress-dev',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(
+        compression({ filter: (req, res) => !req.url?.startsWith('/api/') && compression.filter(req, res) }),
+      );
+    },
+  };
+}
 
 export default defineConfig({
   // Pages are prerendered; only /api/jev-search runs on the server, since it
@@ -48,6 +65,14 @@ export default defineConfig({
     }),
   ],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss(), compressDev()],
+    server: {
+      // Transform the page and its island up front, so the first load after
+      // the dev server starts does not wait on them.
+      warmup: {
+        ssrFiles: ['./src/pages/**/*.astro'],
+        clientFiles: ['./src/components/docs.tsx'],
+      },
+    },
   },
 });

@@ -4,6 +4,7 @@
 // are re-ranked by TypeSafe's Jev model a moment later, via /api/jev-search.
 import type { SharedProps } from 'fumadocs-ui/components/dialog/search';
 import { navigate } from 'astro:transitions/client';
+import { Dialog } from '@base-ui/react/dialog';
 import { JevSearchDialog } from '@/components/jev-search';
 
 const suggestions = [
@@ -13,14 +14,20 @@ const suggestions = [
   'what happens if the connection drops',
 ];
 
-export default function SearchDialog({ open, onOpenChange }: SharedProps) {
+export default function SearchDialog({ open, onOpenChange, dialogHandle }: SharedProps) {
   return (
-    <JevSearchDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      placeholder="Search the holler docs…"
-      suggestions={suggestions}
-      onSelect={(hit) => navigate(hit.url)}
-    />
+    <>
+      {/* Fumadocs' search buttons are Base UI dialog triggers bound to this
+          handle. A root with no popup turns their clicks into open state;
+          jevsearch draws the dialog. */}
+      <Dialog.Root handle={dialogHandle} open={open} onOpenChange={(next) => onOpenChange(next)} modal={false} />
+      <JevSearchDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        placeholder="Search the holler docs using natural language…"
+        suggestions={suggestions}
+        onSelect={(hit) => navigate(hit.url)}
+      />
+    </>
   );
 }

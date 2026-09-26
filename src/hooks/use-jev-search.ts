@@ -74,6 +74,9 @@ export function useJevSearch(options: UseJevSearchOptions = {}): JevSearchState 
     if (hit?.lexical) {
       setEntry(hit)
       setPhase("judging")
+    } else {
+      // Searching: the last results stay up until the keyword pass answers.
+      setPhase("lexical")
     }
 
     const ac = new AbortController()

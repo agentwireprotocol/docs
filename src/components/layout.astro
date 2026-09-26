@@ -46,5 +46,8 @@ const fullTitle = title && title !== 'holler' ? `${title} · holler docs` : 'hol
     transition:name="page-layout"
   >
     <slot />
+    <script>
+      import "@/scripts/copy-code";
+    </script>
   </body>
 </html>

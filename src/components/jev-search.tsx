@@ -11,7 +11,8 @@
  */
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { ArrowDown, ArrowUp, Clock, CornerDownLeft, FileText, Hash, Search, Sparkles, X } from "lucide-react"
+import { ArrowDown, ArrowRight, ArrowUp, BookOpenText, Clock, CornerDownLeft, Hash, MessageCircleQuestion, Search, X } from "lucide-react"
+import { Comet } from "loading-dev"
 import { cn } from "@/lib/utils"
 import { highlightSegments, type SearchHit } from "@/lib/jev-search-core"
 import { useJevSearch, type JevSearchState } from "@/hooks/use-jev-search"
@@ -31,7 +32,7 @@ export interface JevSearchProps {
   onSelect?: (hit: SearchHit) => void
   /** Example queries shown while the box is empty. */
   suggestions?: string[]
-  /** Label used in the footer status. Default "jev". */
+  /** Name for the ranking model in the empty and no-results messages. Default "jev". */
   brand?: string
   /** Remember the last few searches in localStorage. Default true. */
   recent?: boolean
@@ -164,13 +165,34 @@ export function JevSearchDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Keep the active row within range and in view.
+  // Keep the active row within range.
   const hits = search.hits
   const active = Math.min(activeRaw, Math.max(hits.length - 1, 0))
+
+  // New results start at the top.
   React.useEffect(() => {
-    const el = listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)
-    el?.scrollIntoView({ block: "nearest" })
-  }, [active, hits])
+    listRef.current?.scrollTo({ top: 0 })
+  }, [hits])
+
+  // Bring a row the keyboard moved to into view, clear of the faded edges.
+  // offsetTop ignores the transforms rows carry while Jev reorders them (see
+  // useFlip); scrollIntoView would chase a row's old position.
+  const reveal = (index: number) => {
+    requestAnimationFrame(() => {
+      const list = listRef.current
+      const row = list?.querySelector<HTMLElement>(`[data-index="${index}"]`)
+      if (!list || !row) return
+      const margin = 40 // the scroll-fade's depth
+      const top = row.offsetTop - margin
+      const bottom = row.offsetTop + row.offsetHeight + margin
+      if (top < list.scrollTop) list.scrollTop = Math.max(0, top)
+      else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight
+    })
+  }
+  const moveTo = (index: number) => {
+    setActive(index)
+    reveal(index)
+  }
 
   const choose = React.useCallback(
     (hit: SearchHit) => {
@@ -186,22 +208,22 @@ export function JevSearchDialog({
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault()
-        setActive((a) => (hits.length ? (a + 1) % hits.length : 0))
+        moveTo(hits.length ? (active + 1) % hits.length : 0)
         break
       case "ArrowUp":
         e.preventDefault()
-        setActive((a) => (hits.length ? (a - 1 + hits.length) % hits.length : 0))
+        moveTo(hits.length ? (active - 1 + hits.length) % hits.length : 0)
         break
       case "Home":
         if (hits.length) {
           e.preventDefault()
-          setActive(0)
+          moveTo(0)
         }
         break
       case "End":
         if (hits.length) {
           e.preventDefault()
-          setActive(hits.length - 1)
+          moveTo(hits.length - 1)
         }
         break
       case "Enter":
@@ -233,6 +255,8 @@ export function JevSearchDialog({
   const query = search.query.trim()
   const showEmptyState = query.length === 0
   const listboxId = "jev-search-listbox"
+  // Fetching the keyword pass, or waiting for Jev's ranking.
+  const searching = search.phase === "lexical" || search.phase === "judging"
 
   return createPortal(
     <div
@@ -268,7 +292,10 @@ export function JevSearchDialog({
       >
         {/* Input row */}
         <div data-slot="jev-search-input" className="flex items-center gap-3 border-b border-border px-4">
-          <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+          {/* The magnifier turns into a spinner while a search is running. */}
+          <span data-slot="jev-search-icon" data-state={searching ? "searching" : "idle"} className="flex size-5 shrink-0 items-center justify-center text-muted-foreground" aria-hidden>
+            {searching ? <Comet size={20} color="var(--muted-foreground)" /> : <Search className="size-5" />}
+          </span>
           <input
             ref={inputRef}
             role="combobox"
@@ -305,23 +332,15 @@ export function JevSearchDialog({
           </button>
         </div>
 
-        {/* Indeterminate bar while Jev judges. Restyle it via the data-slot. */}
+        {/* Body. scroll-fade (shadcn) fades whichever edge has more to scroll. */}
         <div
-          data-slot="jev-search-progress"
-          data-state={search.phase === "judging" ? "on" : "off"}
-          aria-hidden
-          className="relative h-0.5 overflow-hidden bg-muted opacity-0 transition-opacity duration-150 data-[state=on]:opacity-100"
+          ref={listRef}
+          data-slot="jev-search-list"
+          id={listboxId}
+          role="listbox"
+          aria-busy={searching}
+          className="scroll-fade no-scrollbar relative max-h-[min(60vh,32rem)] overflow-y-auto overscroll-contain p-2"
         >
-          <i
-            className={cn(
-              "absolute inset-y-0 left-0 block w-1/5 bg-[var(--_jev-accent)]",
-              search.phase === "judging" && "animate-[jev-indeterminate_1.1s_ease-in-out_infinite] motion-reduce:w-full motion-reduce:animate-none",
-            )}
-          />
-        </div>
-
-        {/* Body */}
-        <div ref={listRef} data-slot="jev-search-list" id={listboxId} role="listbox" className="max-h-[min(60vh,32rem)] overflow-y-auto overscroll-contain p-2">
           {showEmptyState ? (
             <EmptyState
               suggestions={suggestions}
@@ -366,7 +385,7 @@ export function JevSearchDialog({
             </Kbd>
             open
           </span>
-          <Status search={search} brand={brand} className="ml-auto" />
+          <Status search={search} className="ml-auto" />
         </div>
       </div>
     </div>,
@@ -435,14 +454,8 @@ function Results({
         </div>
       ))}
       {demoted.length > 0 ? (
-        <div role="group" aria-label="Below the relevance threshold">
-          <div
-            data-slot="jev-search-group"
-            data-variant="demoted"
-            className="px-2 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
-          >
-            Jev ruled these out
-          </div>
+        // Below the relevance threshold: greyed, still clickable, no heading.
+        <div role="group" aria-label="Less relevant" className="pt-2">
           {demoted.map((hit, i) => (
             <Row
               key={hit.id}
@@ -482,7 +495,7 @@ function Row({
   demoted?: boolean
 }) {
   const isAnchor = hit.url.includes("#")
-  const Icon = isAnchor ? Hash : FileText
+  const Icon = isAnchor ? Hash : BookOpenText
   return (
     <a
       id={`jev-hit-${hit.id}`}
@@ -508,11 +521,11 @@ function Row({
       <span
         data-slot="jev-search-item-icon"
         className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground",
-          active && "border-transparent bg-[var(--_jev-accent)] text-[var(--_jev-accent-fg)]",
+          "flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground shadow-[0_0_0_1px_var(--color-border)] transition-colors",
+          active && "bg-background text-foreground shadow-[0_0_0_1px_var(--color-input),0_1px_2px_rgb(0_0_0/0.06)]",
         )}
       >
-        <Icon className="size-4" aria-hidden />
+        <Icon className="size-3.5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
         <span data-slot="jev-search-item-title" className="block truncate font-medium leading-5">
@@ -529,22 +542,17 @@ function Row({
   )
 }
 
-/** A tiny relevance meter. Shimmers while Jev thinks, then fills. */
+/** A tiny relevance meter: an empty track while Jev thinks (the input's
+ *  spinner shows the wait), then it fills. Both take the same width, so the
+ *  row does not reflow when the ranking lands. */
 function Meter({ value, judged, judging }: { value?: number; judged: boolean; judging: boolean }) {
   if (!judged && !judging) return null
   if (!judged || value === undefined) {
     return (
-      <span
-        data-slot="jev-search-meter"
-        data-state="pending"
-        className="h-1.5 w-12 shrink-0 rounded-full bg-muted"
-        style={{
-          backgroundImage: "linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--_jev-accent) 60%, transparent) 50%, transparent 100%)",
-          backgroundSize: "200% 100%",
-          animation: "jev-shimmer 1.1s linear infinite",
-        }}
-        aria-hidden
-      />
+      <span data-slot="jev-search-meter" data-state="pending" className="flex shrink-0 items-center gap-2" aria-hidden>
+        <span data-slot="jev-search-meter-track" className="h-1.5 w-12 rounded-full bg-muted" />
+        <span className="w-8" />
+      </span>
     )
   }
   const pct = Math.round(value * 100)
@@ -569,31 +577,16 @@ function Meter({ value, judged, judging }: { value?: number; judged: boolean; ju
   )
 }
 
-function Status({ search, brand, className }: { search: JevSearchState; brand: string; className?: string }) {
-  const { phase, jevMs, judgedCount, cached, error, answerable } = search
-  const q = search.query.trim()
+/** The footer's right side: a warning when Jev could not rank. The input's
+ *  spinner shows a search in progress. */
+function Status({ search, className }: { search: JevSearchState; className?: string }) {
+  const { phase, error } = search
   return (
     <span data-slot="jev-search-status" className={cn("inline-flex min-w-0 items-center gap-1.5 truncate", className)}>
-      {phase === "judging" ? (
-        <>
-          <Sparkles className="size-3 shrink-0" style={{ color: "var(--_jev-accent)" }} aria-hidden />
-          <span className="jev-shimmer-text">{brand} is reading the top matches…</span>
-        </>
-      ) : phase === "done" ? (
-        <>
-          <Sparkles className="size-3 shrink-0" style={{ color: "var(--_jev-accent)" }} aria-hidden />
-          <span>
-            {brand} ranked {judgedCount} {judgedCount === 1 ? "page" : "pages"}
-            {cached ? " · cached" : ` in ${jevMs} ms`}
-            {answerable !== undefined && answerable < 0.35 ? " · low confidence" : ""}
-          </span>
-        </>
-      ) : phase === "error" ? (
+      {phase === "error" ? (
         <span className="text-destructive" title={error}>
           keyword ranking only
         </span>
-      ) : q.length === 0 ? (
-        <span>Ask in plain English</span>
       ) : null}
     </span>
   )
@@ -642,16 +635,23 @@ function EmptyState({
           <div data-slot="jev-search-group" className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Try asking
           </div>
-          <div className="flex flex-wrap gap-1.5 px-2 pb-2">
+          <div className="flex flex-col">
             {suggestions.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => onPick(s)}
                 data-slot="jev-search-suggestion"
-                className="rounded-full border border-border bg-background px-3 py-1 text-xs text-foreground/80 transition-colors hover:border-[var(--_jev-accent)] hover:bg-accent"
+                className="group/suggestion flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
-                {s}
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground shadow-[0_0_0_1px_var(--color-border)] transition-colors group-hover/suggestion:bg-background group-hover/suggestion:text-foreground">
+                  <MessageCircleQuestion className="size-3.5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1 truncate">{s}</span>
+                <ArrowRight
+                  className="size-3.5 shrink-0 -translate-x-1 opacity-0 transition-all group-hover/suggestion:translate-x-0 group-hover/suggestion:opacity-100"
+                  aria-hidden
+                />
               </button>
             ))}
           </div>
@@ -684,7 +684,8 @@ function Highlight({ text, terms }: { text: string; terms: string[] }) {
         s.match ? (
           <mark
             key={i}
-            className="bg-transparent font-semibold text-inherit underline decoration-[var(--_jev-accent)] decoration-2 underline-offset-2"
+            className="bg-transparent font-semibold text-inherit underline decoration-2 underline-offset-2"
+            style={{ textDecorationColor: "color-mix(in oklab, var(--_jev-accent) 35%, transparent)" }}
           >
             {s.text}
           </mark>
@@ -778,22 +779,7 @@ function useFlip(hits: SearchHit[]) {
 }
 
 const KEYFRAMES = `
-@keyframes jev-indeterminate {
-  0% { transform: translateX(-10%) }
-  50% { transform: translateX(410%) }
-  100% { transform: translateX(-10%) }
-}
 @keyframes jev-fade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes jev-pop { from { opacity: 0; transform: translateY(-6px) scale(.985) } to { opacity: 1; transform: none } }
-@keyframes jev-shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }
 @keyframes jev-grow { from { transform: scaleX(0) } to { transform: scaleX(1) } }
-.jev-shimmer-text {
-  background: linear-gradient(90deg, currentColor 0%, currentColor 40%, var(--_jev-accent) 50%, currentColor 60%, currentColor 100%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: jev-shimmer 1.4s linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .jev-shimmer-text { animation: none; color: inherit; background: none; }
-}
 `

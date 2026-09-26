@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'shadcn/tailwind.css';
 @import 'shadow-plugin/unprefixed';
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/geist-mono';
@@ -33,6 +34,7 @@
   --accent-tint: oklch(0.96 0.019 252.878);
 
   --green: oklch(0.603 0.155 150.883);
+  --emerald: oklch(0.596 0.145 163.225);
   --orange: oklch(0.689 0.179 49.902);
   --red: oklch(0.621 0.192 23.042);
 
@@ -68,6 +70,7 @@
   --accent-tint: oklch(0.68 0.173 253.301 / 0.16);
 
   --green: oklch(0.705 0.154 153.814);
+  --emerald: oklch(0.765 0.177 163.223);
   --orange: oklch(0.746 0.156 55.642);
   --red: oklch(0.666 0.18 21.433);
 
@@ -106,9 +109,10 @@
   --color-fd-success: var(--green);
   --color-fd-idea: var(--orange);
 
-  /* jevsearch: its accent, and the raw shadcn variables it mixes colours from */
-  --jev-accent: var(--accent);
-  --jev-accent-foreground: oklch(1 0 0);
+  /* jevsearch: its accent (ink, like the dashboard's primary), and the raw
+     shadcn variables it mixes colours from */
+  --jev-accent: var(--ink);
+  --jev-accent-foreground: var(--surface);
   --muted-foreground: var(--ink-2);
   --primary: var(--ink);
   --primary-foreground: var(--surface);
@@ -162,6 +166,23 @@ h2,
 h3,
 h4 {
   text-wrap: balance;
+}
+
+/* ── shadcn's scroll-fade, in production builds ────────── */
+
+/* scroll-fade drives its fade with `animation` followed by
+   `animation-timeline: scroll(self y)`. The build's minifier (Lightning CSS)
+   folds the two into one shorthand, which browsers reject, so the fade never
+   moves. Restating the animation as longhands, which the minifier leaves
+   alone, keeps it working; in dev, where nothing is minified, it changes
+   nothing. */
+@supports (animation-timeline: scroll()) {
+  .scroll-fade {
+    animation-name: scroll-fade-reveal-t, scroll-fade-reveal-b;
+    animation-duration: 1ms;
+    animation-timing-function: ease-in-out;
+    animation-timeline: scroll(self y), scroll(self y);
+  }
 }
 
 /* ── sidebar: the dashboard's nav rows ─────────────────── */
@@ -279,6 +300,79 @@ a[data-card='true']:hover {
 figure.shiki pre,
 figure.shiki code {
   font-family: var(--font-mono);
+}
+
+/* ── code block copy button (components/code-block.tsx) ─────────────── */
+
+/* The copy icon and an emerald check share one spot. On copy the icon blurs
+   out, the check pops in and draws itself; then it undraws and the icon
+   returns. */
+.copy-code {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.copy-code:hover {
+  color: var(--ink);
+  background: var(--hover-2);
+}
+.copy-code:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.copy-code > svg {
+  grid-area: 1 / 1;
+  width: 15px;
+  height: 15px;
+  transition:
+    opacity 0.2s ease,
+    transform 0.35s var(--ease-out-strong),
+    filter 0.2s ease;
+}
+.copy-code-check {
+  color: var(--emerald);
+  opacity: 0;
+  transform: scale(0.5) rotate(-12deg);
+  filter: blur(2px);
+}
+.copy-code-check path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 0.3s var(--ease-out-strong);
+}
+.copy-code[data-state='copied'] {
+  background: color-mix(in oklab, var(--emerald) 12%, transparent);
+}
+.copy-code[data-state='copied'] .copy-code-icon {
+  opacity: 0;
+  transform: scale(0.5);
+  filter: blur(2px);
+}
+.copy-code[data-state='copied'] .copy-code-check {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+.copy-code[data-state='copied'] .copy-code-check path {
+  stroke-dashoffset: 0;
+  transition-delay: 0.05s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-code > svg,
+  .copy-code-check path {
+    transition: opacity 0.15s ease;
+    transform: none !important;
+    filter: none !important;
+  }
+  .copy-code-check path {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* ── the orb (the dashboard's mark: components/holler/Header.tsx) ───── */
