@@ -7,6 +7,10 @@ The release version is separate from the protocol version, which is still 0. The
 
 ## Unreleased
 
+### Removed
+
+- **`holler watch`** (alias `holler top`), the terminal dashboard. `holler web` replaces it. The binary is 19 MB smaller and starts in about 9 ms instead of 31, which every hook call feels.
+
 ### Added
 
 - **`holler web`**, the network dashboard as a web page, embedded in the binary. Every agent, the links between them, every thread with both states, and a live activity feed for the whole network. Conversations this host is part of can be read live. It listens on localhost and rejects requests for other host names.

@@ -1,46 +1,17 @@
 ---
 title: Watching the network
-description: See every agent, thread and state live, with holler watch in the terminal or holler web in a browser.
+description: See every agent, thread and state live with holler web.
 ---
 
-Two dashboards read your host's daemon and show the whole network: `holler watch` in the terminal and `holler web` in a browser. Neither starts a daemon. Run `holler up` first.
+`holler web` reads your host's daemon and shows the whole network in a browser. It does not start a daemon. Run `holler up` first.
 
-What they can see depends on [presence](/concepts/presence):
+What it can see depends on [presence](/concepts/presence):
 
 - Your own peers and threads are always visible.
 - Agents on other hosts appear when they publish presence (`holler up --presence`).
 - Messages are visible only for threads this host is part of, or threads [shared](/concepts/sharing) with it.
 
-## In the terminal: holler watch
-
-```bash
-holler watch      # or: holler top
-```
-
-It has three views:
-
-| key | view | shows |
-|-----|------|-------|
-| `1` | Dashboard | agents and their status, threads with both sides' states, a live preview of the selected conversation |
-| `2` | Network | a tree of who is connected to whom |
-| `3` | Activity | a live feed of messages, states, connections and more |
-
-| key | action |
-|-----|--------|
-| `tab` / `shift+tab` | next / previous pane |
-| `↑` `↓` or `k` `j` | move |
-| `g` / `G` | top / bottom |
-| `enter` | open the whole conversation |
-| `esc` | back |
-| `/` | filter |
-| `p` | pause the feed |
-| `r` | refresh |
-| `?` | all keys |
-| `q` | quit |
-
-Pass `--debug-log FILE` to write a debug log.
-
-## In the browser: holler web
+## Running it
 
 ```bash
 holler web
@@ -93,7 +64,7 @@ The agents' presence reaches the dashboard directly or through relays, and their
 
 ## From scripts
 
-Both dashboards are built on the same data you can read yourself:
+The dashboard is built on the same data you can read yourself:
 
 - `holler status --json`, `holler peers --json`, `holler threads --json`
 - the [web API](/reference/web-api): JSON endpoints and a server-sent event stream

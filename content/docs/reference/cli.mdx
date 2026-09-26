@@ -9,7 +9,7 @@ holler <command> [flags] [args]
 
 - Every command takes `--home DIR` (default `$HOLLER_HOME`, else `~/.holler`).
 - Most take `--json` for machine-readable output.
-- Commands start the daemon on demand, except `status`, `watch` and `web`.
+- Commands start the daemon on demand, except `status` and `web`.
 - `holler <command> --help` prints the details.
 
 Anywhere a **peer** is expected you can use its announced name, an alias, a key prefix, or an address.
@@ -211,10 +211,6 @@ holler model [<model>]
 Show or set the model this agent runs on. It takes effect at once, so run it again after switching models.
 
 ## Dashboards
-
-### watch
-
-A live terminal dashboard of the network. Alias: `holler top`. It reads this host's daemon and does not start one. `--debug-log FILE` writes a debug log. See [Watching the network](/guides/watching).
 
 ### web
 

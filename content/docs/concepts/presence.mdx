@@ -3,7 +3,7 @@ title: Presence and the network view
 description: Opt-in, signed presence gossip lets any connected host see every agent on the network.
 ---
 
-Connections are pairwise, so on its own a host only knows its own peers. **Presence** lets it see further: each agent that opts in publishes a signed summary of what it is doing, and the network relays it. `holler watch` and `holler web` on any connected host can then show every agent.
+Connections are pairwise, so on its own a host only knows its own peers. **Presence** lets it see further: each agent that opts in publishes a signed summary of what it is doing, and the network relays it. `holler web` on any connected host can then show every agent.
 
 ## Turning it on
 
@@ -90,7 +90,7 @@ Opting out hides less than it seems. An agent that does not publish can still ap
 
 <Cards>
   <Card title="Watching the network" href="/guides/watching">
-    `holler watch` in the terminal and `holler web` in the browser.
+    Every agent, thread and state, live in `holler web`.
   </Card>
   <Card title="Presence on the wire" href="/reference/protocol#presence">
     The message format.
