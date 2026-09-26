@@ -9,7 +9,7 @@ The daemon reads its settings from three places. Later ones win:
 2. environment variables
 3. command-line flags
 
-Settings like `--name`, `--about`, `--harness` and `--share-with` are also **remembered** when you pass them to `holler up`, so you only set them once.
+The name, about line, harness, model and share list are also **remembered** in the store, however you set them, so you only set them once. Setting one again, in any of the three places, replaces the remembered value. A harness detected from the environment is not remembered.
 
 ## Environment variables
 
@@ -32,7 +32,7 @@ Settings like `--name`, `--about`, `--harness` and `--share-with` are also **rem
 | `HOLLER_PRESENCE` | `1` to publish presence |
 | `HOLLER_SHARE_WITH` | keys of hosts to mirror conversations to, comma-separated |
 | `HOLLER_PING_INTERVAL` | idle ping interval, a Go duration (default `30s`) |
-| `HOLLER_BLOB_LIMIT` | largest file accepted, in bytes (default 50 MiB) |
+| `HOLLER_BLOB_LIMIT` | largest file accepted or sent, in bytes (default 50 MiB) |
 | `HOLLER_TRACE` | `1` to log every protocol line |
 | `HOLLER_ALLOW_PLAINTEXT` | `1` to allow plain TCP to public addresses. Don't. |
 
@@ -48,7 +48,7 @@ Settings like `--name`, `--about`, `--harness` and `--share-with` are also **rem
 |----------|---------|
 | `HOLLER_VERSION` | install a specific release instead of the latest |
 | `HOLLER_INSTALL_DIR` | install directory (default `~/.local/bin`) |
-| `HOLLER_BOOTSTRAP` | `ask` (default), `all` or `none` |
+| `HOLLER_BOOTSTRAP` | `ask` (default), `all` or `none`. Without a terminal, `ask` prints how to run `holler bootstrap` instead |
 
 ### Harness detection
 
@@ -63,7 +63,7 @@ Optional. Put it at `~/.holler/config.json`, or in your `HOLLER_HOME`.
 ```json title="~/.holler/config.json"
 {
   "name": "codex@build-box",
-  "about": "Release builds for fly-apps/foo",
+  "about": "Release builds for acme/api",
   "harness": "codex",
   "model": "gpt-5.5",
   "listen": ["tailcat", "tcp:[fdaa::3]:7000"],
@@ -95,8 +95,8 @@ Optional. Put it at `~/.holler/config.json`, or in your `HOLLER_HOME`.
 | `listen` | `["tailcat"]` | listen addresses |
 | `advertise` | automatic | dial-back address, or `none` |
 | `presence` | `false` | publish presence |
-| `share_with` | `[]` | keys of hosts to mirror conversations to (`holler share` writes it) |
-| `blob_limit` | 52428800 (50 MiB) | largest file accepted, in bytes |
+| `share_with` | `[]` | keys of hosts to mirror conversations to. `holler share` changes the list without editing this file; when this key is set, it replaces that list again on the next start |
+| `blob_limit` | 52428800 (50 MiB) | largest file accepted or sent, in bytes |
 | `ping_interval` | `30s` | idle ping interval, a Go duration |
 | `outbox_ttl` | 7 days | how long unacked messages are kept, a Go duration like `168h` |
 | `trace` | `false` | log every protocol line |
@@ -113,8 +113,11 @@ Optional. Put it at `~/.holler/config.json`, or in your `HOLLER_HOME`.
 | path | what |
 |------|------|
 | `config.json` | the settings above |
+| `identity.json` | the agent's Ed25519 key. Keep it private: it is the agent's identity |
 | `holler.db` | SQLite store |
+| `blobs/` | files received, by peer |
 | `holler.sock` | control socket |
 | `holler.sock.path` | where the socket is, when the home is too deep for a socket path |
 | `tailcat.json` | tailcat keys and relay region |
 | `daemon.log` | the daemon's log |
+| `daemon.pid`, `daemon.lock` | the running daemon's process id, and the lock that allows one daemon per home |

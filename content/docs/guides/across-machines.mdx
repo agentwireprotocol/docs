@@ -13,28 +13,30 @@ holler's main case is two agents on different machines, often behind NAT, often 
 | machines on one private network (Fly 6PN, a VPC) | `tcp:HOST:PORT` | lower latency, no relay |
 | two homes on one machine | `unix:/path` | no network at all |
 
-Tailcat is on by default. To add a private-network listener as well:
+Tailcat is on by default. To add a private-network listener as well, list both in the home's config, so a daemon started on demand picks them up too:
 
-```bash
-holler daemon --listen tailcat --listen 'tcp:[fdaa::3]:7000'
+```json title="~/.holler/config.json"
+{ "listen": ["tailcat", "tcp:[fdaa::3]:7000"] }
 ```
 
-Peers on the private network connect with `holler connect tcp:[fdaa::3]:7000`. Remember that TCP and Unix bindings have no transport encryption. The handshake still authenticates both keys, but holler refuses plain TCP to public addresses.
+Then restart the daemon with `holler down` and `holler up`. `HOLLER_LISTEN` and `holler daemon --listen` do the same for one start. See [Environment variables and config](/reference/environment).
+
+Peers on the private network connect with `holler connect tcp:[fdaa::3]:7000`. Remember that TCP and Unix bindings have no transport encryption. The handshake still authenticates both keys, and holler refuses plain TCP to public addresses.
 
 ## Latency
 
-Once a connection is up, round trips are about 1 ms on one host and about 10 ms between cloud sandboxes in one region. The dashboards show each link's latency.
+Once a connection is up, round trips are about 1 ms on one host and about 10 ms between cloud sandboxes in one region. `holler web` shows each link's latency.
 
 - A **fresh** tailcat dial takes seconds, not milliseconds.
 - The first round-trip measurement is taken about 3 seconds after a connection resumes, then with every ping (every 30 seconds when idle).
-- Each CLI call costs about 30 ms to start, most of it the markdown renderer's setup.
+- Each CLI call costs about 9 ms to start.
 
 ## Sleep and pause
 
-holler is built for sleep: messages queue on disk, the awake side retries every 60 seconds at most, and nothing is lost. But there is one hard limit.
+holler is built for sleep. Messages queue on disk and are kept for 7 days (`outbox_ttl`). While there is unfinished business, the awake side keeps retrying, at most 60 seconds apart. Nothing is lost or duplicated when the connection resumes. But there is one hard limit.
 
 <Callout type="warn">
-A **paused** sandbox cannot be dialed over tailcat. Its tailcat listener waits on a DERP relay connection, and a frozen process cannot answer, so a connection attempt cannot wake it. This is tracked as issue #4.
+A **paused** sandbox cannot be dialed over tailcat. Its tailcat listener waits on a DERP relay connection, and a frozen process cannot answer, so a connection attempt cannot wake it. This is tracked in [issue #4](https://github.com/hollerprotocol/holler/issues/4).
 </Callout>
 
 Until there is a wake-on-connect binding (for example, a WebSocket through the sandbox's HTTP URL), work around it:
@@ -45,7 +47,7 @@ Until there is a wake-on-connect binding (for example, a WebSocket through the s
 
 ## Reconnecting after a restart
 
-Your tailcat address survives restarts. The keys and relay region are in `tailcat.json` in the home. A sandbox restored from a snapshot is back at the same address, and its peers reconnect on their own.
+Your tailcat address survives restarts. The keys and relay region are in `tailcat.json` in the home. A sandbox restored from a snapshot is back at the same address, and peers with unfinished business reconnect on their own.
 
 If you copy a home to a new machine, you copy its identity too. Don't run two daemons with the same home at once: both would claim the same key.
 
@@ -61,7 +63,7 @@ A lesson from running agents across sandboxes: some harness logins do not surviv
 # install and wire into harnesses
 curl -fsSL https://raw.githubusercontent.com/hollerprotocol/holler/main/install.sh | sh
 
-# bring it up with a clear name, and publish presence for the dashboards
+# bring it up with a clear name, and publish presence for holler web
 holler up --name codex@build-box --about "Release builds" --presence
 
 # connect to the always-on side
@@ -69,6 +71,8 @@ holler connect <address>
 
 holler peers
 ```
+
+`--name` and `--about` are remembered. `--presence` is not, and like the others it applies only when `holler up` starts the daemon. To publish presence on every start, set `"presence": true` in `config.json`. See [Presence](/concepts/presence).
 
 ## Troubleshooting
 

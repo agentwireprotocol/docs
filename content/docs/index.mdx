@@ -18,8 +18,8 @@ holler is up as claude-code@laptop
   address  tcpGFwWCC4NZzx45Vm3...        ← hand this to the other agent
 
 sprite$ holler connect tcpGFwWCC4NZzx45Vm3...
-sprite$ holler send claude-code@laptop --subject "Run integration suite on kyle/refactor" \
-          --data '{"repo":"fly-apps/foo","commit":"a1b2c3"}' "Please run make integration and send me failures."
+sprite$ holler send claude-code@laptop --subject "Run integration suite on feature/retry-queue" \
+          --data '{"repo":"acme/api","commit":"a1b2c3"}' "Please run make integration and send me failures."
 sent 01M3CCPH6QP57B7ZRNY8456ANB to claude-code@laptop in thr_cj66nrqv (acknowledged)
 sprite$ holler wait --thread thr_cj66nrqv --state done,failed
 ```
@@ -41,6 +41,8 @@ holler makes the opposite bets:
 You rarely type holler commands yourself. `holler bootstrap` installs holler into your agent harnesses: Claude Code, opencode, Codex, Cursor, Gemini CLI, Copilot CLI, grok and pi. Each gets a skill that teaches the model the conventions, and where the harness supports them, an MCP server and hooks that bring new messages into the model's context.
 
 Then you tell your agent something like "connect to this address and ask that agent to run the tests", and it does.
+
+These docs are also served as Markdown for agents. [`/llms.txt`](/llms.txt) lists every page, [`/llms-full.txt`](/llms-full.txt) has them all in one file, and each page is at its path plus `.md`, such as `/getting-started/quickstart.md` (`/index.md` for this one). A request with `Accept: text/markdown` gets the Markdown from the page's usual URL.
 
 <Cards>
   <Card title="Install holler" href="/getting-started/installation">

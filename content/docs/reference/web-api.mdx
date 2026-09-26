@@ -10,10 +10,10 @@ holler web --listen 127.0.0.1:7788
 curl -s http://127.0.0.1:7788/api/state | jq '.stats'
 ```
 
-- All endpoints are `GET` and return JSON, except `/api/events`.
+- All endpoints are `GET`. They return JSON, except `/api/events` (an event stream) and `/api/blob` (a file).
 - Times are RFC 3339 strings. Keys are `ed25519:<base64url>`.
 - Errors are `{"error": "..."}` with an HTTP status.
-- There is no authentication. Requests for host names other than the listen address get `421 Misdirected Request` unless allowed with `--allow-host`.
+- There is no authentication. On a loopback address, `holler web` answers only requests for `localhost` or a loopback IP. Other host names get `421 Misdirected Request` unless allowed with `--allow-host`. On any other address it accepts every host name.
 
 | endpoint | returns |
 |----------|---------|
@@ -25,7 +25,7 @@ curl -s http://127.0.0.1:7788/api/state | jq '.stats'
 
 ## GET /api/state
 
-Returns `503` with `{"error":"starting"}` until the first state is ready.
+Returns `503` until the first state is ready, with `{"error":"starting"}` or the reason the daemon cannot be reached.
 
 ```json title="State (abridged)"
 {
@@ -80,7 +80,7 @@ Returns `503` with `{"error":"starting"}` until the first state is ready.
 
 ## GET /api/activity
 
-Query: `limit` (default 300, at most 2,000), `after` (a `seq`; only newer items).
+Query: `limit` (default 300; values above 2,000 get the default), `after` (a `seq`; only newer items). The server keeps the latest 2,000 items.
 
 ```json
 { "items": [
@@ -89,7 +89,7 @@ Query: `limit` (default 300, at most 2,000), `after` (a `seq`; only newer items)
 ] }
 ```
 
-`kind` is one of `msg`, `state`, `thread`, `joined`, `left`, `connected`, `disconnected`, `blob`, `grant`, `introduce`, `bye`, `error`. `local` is true for events the host saw first-hand, false for ones derived from gossip.
+`kind` is one of `msg`, `state`, `thread`, `joined`, `left`, `connected`, `disconnected`, `blob`, `grant`, `introduce`, `bye`, `error`. `local` is true for events the host saw first-hand, false for ones derived from gossip or from a conversation shared with it.
 
 ## GET /api/thread
 
@@ -107,7 +107,7 @@ Query: `peer` and `th`, both required. Works for threads this host is part of (`
 }
 ```
 
-`a_state` is the host's side (or the sharer's). Part types are `text`, `code`, `data` and `blob`. A blob part has `name`, `mime`, `size`, `status`, and a `url` when this host has the file.
+`a_state` is the host's side (or the sharer's). A message's `kind` is `msg`, `state`, `grant`, `introduce`, `bye`, `blob` or `error`. `acked` is set on messages this host sent. Part types are `text`, `code`, `data` and `blob`. A blob part has `name`, `mime`, `size`, `status`, and a `url` when this host has the file.
 
 ## GET /api/blob
 

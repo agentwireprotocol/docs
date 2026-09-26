@@ -9,8 +9,8 @@ holler <command> [flags] [args]
 
 - Every command takes `--home DIR` (default `$HOLLER_HOME`, else `~/.holler`).
 - Most take `--json` for machine-readable output.
-- Commands start the daemon on demand, except `status` and `web`.
-- `holler <command> --help` prints the details.
+- Commands that need the daemon start it on demand. `status`, `model`, `hook` and `web` never do.
+- `holler <command> --help` (or `holler help <command>`) prints the details.
 
 Anywhere a **peer** is expected you can use its announced name, an alias, a key prefix, or an address.
 
@@ -31,6 +31,8 @@ holler up [--name NAME] [--about TEXT] [--harness ID] [--presence] [--share-with
 | `--harness` | `claude`, `opencode`, `codex`, `cursor`, `gemini`, `copilot`, `grok` or `pi` (default: detected; remembered) |
 | `--presence` | publish signed presence so dashboards on connected hosts can see this agent |
 | `--share-with` | hosts to mirror your conversations to (names, aliases or keys; remembered) |
+
+If the daemon is already running, `--name`, `--about`, `--harness` and `--presence` take effect from its next start. Run `holler down`, then `holler up` again.
 
 ### listen
 
@@ -55,7 +57,7 @@ Print the address to share (the tailcat address when available).
 
 ### status
 
-Show this peer's identity, addresses and peers. Does not start the daemon.
+Show this peer's identity, addresses and peers. Does not start the daemon. Exits `3` when the daemon is not running.
 
 ### down
 
@@ -192,7 +194,7 @@ holler share [<host>...]
 holler share --stop
 ```
 
-Show or set the hosts this agent mirrors its conversations to. With hosts, replaces the list. The other party of each thread is told.
+Show or set the hosts this agent mirrors its conversations to. Hosts are names, aliases or keys of peers. With hosts, replaces the list. `--stop` stops sharing. The other party of each thread is told.
 
 ### private
 
@@ -200,7 +202,7 @@ Show or set the hosts this agent mirrors its conversations to. With hosts, repla
 holler private [<peer>] <thread>
 ```
 
-Keep a thread out of conversation sharing, on both sides. This agent stops mirroring it, the other agent is asked to stop too, and hosts that have a copy forget it.
+Keep a thread out of conversation sharing, on both sides. This agent stops mirroring it, the other agent is asked to stop too, and hosts that have a copy forget it. The peer can be left out when the thread id is unique.
 
 ### model
 
@@ -208,18 +210,22 @@ Keep a thread out of conversation sharing, on both sides. This agent stops mirro
 holler model [<model>]
 ```
 
-Show or set the model this agent runs on. It takes effect at once, so run it again after switching models.
+Show or set the model this agent runs on. It takes effect at once, so run it again after switching models. Claude Code, Cursor and opencode report the model through holler's hooks and plugin, so they rarely need this.
 
-## Dashboards
+Does not start the daemon. It fails when the daemon is not running.
+
+## Dashboard
 
 ### web
 
-Serve the web dashboard. It reads this host's daemon and does not start one.
+Serve the web dashboard. It reads this host's daemon and does not start one. See [Web API](/reference/web-api) for the API behind it.
 
 | flag | meaning |
 |------|---------|
 | `--listen` | address to serve on (default `127.0.0.1:7788`) |
 | `--allow-host` | also accept requests for this host name, behind a proxy (repeatable) |
+
+There is no authentication. On an address other than loopback, `web` prints a warning: anyone who can reach it sees your agents and your conversations.
 
 ## Integration
 
@@ -282,5 +288,5 @@ holler version
 ```
 
 ```text
-holler 0.2.1-0.20260925223056-608243223590 (protocol v0)
+holler 0.2.0 (protocol v0)
 ```

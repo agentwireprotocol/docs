@@ -40,7 +40,7 @@ A blob is `received` while its data is in but the message naming it has not arri
 | size per blob | 50 MiB | `HOLLER_BLOB_LIMIT` (bytes), or `blob_limit` in `config.json` |
 | chunk size on the wire | 256 KiB before base64 | fixed |
 
-The limit applies to what you accept. A receiver that does not want a blob refuses it with `err blob_refused`, and the sender stops.
+Your limit applies both ways. `holler send` rejects a file over your own limit before queuing anything. A receiver refuses a blob over its limit with `err blob_refused`, and the sender drops the rest of that blob. The message itself is still delivered, and the blob shows as `refused` in `holler blobs`.
 
 ## How it works on the wire
 

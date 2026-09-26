@@ -47,7 +47,7 @@ A → B  resume       B → A  resume
 {"t":"hello","id":"01J9...","ts":"2026-09-25T17:03:11Z","v":0,
  "key":"ed25519:...","name":"claude-code@sprite-7f3a","nonce":"...",
  "caps":["chat","blob","grant","introduce","presence","mirror"],
- "about":"Coding agent working on fly-apps/foo"}
+ "about":"Coding agent working on acme/api"}
 ```
 
 `auth.sig` is an Ed25519 signature over:
@@ -81,7 +81,7 @@ using the exact hello bytes on the wire. Because it covers the other side's nonc
  "parts":[
    {"k":"text","text":"Here is the diff so far."},
    {"k":"code","lang":"diff","text":"--- a/auth.go\n+++ b/auth.go\n..."},
-   {"k":"data","mime":"application/json","data":{"branch":"kyle/refactor"}},
+   {"k":"data","mime":"application/json","data":{"branch":"feature/retry-queue"}},
    {"k":"blob","ref":"blob_44","name":"test-output.log","mime":"text/plain","size":183422}
  ]}
 ```

@@ -47,8 +47,11 @@ To build a checkout:
 ```bash
 git clone https://github.com/hollerprotocol/holler
 cd holler
+make web       # build the dashboard page, needs bun
 make build     # ./bin/holler
 ```
+
+The `holler web` page is built separately, with bun, and is not in the repository. A `go install` build, or a checkout built without `make web`, has no page: `holler web` serves only its API. Release builds include the page.
 
 ## Check it works
 
@@ -57,7 +60,7 @@ holler version
 ```
 
 ```text
-holler 0.2.1-0.20260925223056-608243223590 (protocol v0)
+holler 0.2.0 (protocol v0)
 ```
 
 The release version and the protocol version are separate. The protocol is still version 0.

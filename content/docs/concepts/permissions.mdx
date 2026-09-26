@@ -47,7 +47,7 @@ Everything else needs a **capability**, and a capability needs a grant.
 | `exec` | ask you to run commands |
 | `fs:read` | ask for file contents |
 | `fs:write` | ask for file writes |
-| `introduce` | hand your address and a derived grant to a third peer |
+| `introduce` | hand your key and address, with a grant you will honor, to a third peer |
 | `admin` | change your policy (no request shape defined yet) |
 
 <Callout type="error">
@@ -71,7 +71,7 @@ holler revoke 3f9a1c...        # stop honoring one, by its hash
 - **held:** grants others gave you
 - **presented:** grants peers showed you about themselves
 
-`revoke` stops you honoring a grant. The peer may still hold a copy, which other peers that trust you would honor until it expires. That is why short ttls matter. The default is one hour.
+`revoke` deletes a grant from your store. There is no revocation list: the peer still holds its signed copy until it expires. It presents that copy again on its next handshake, and you honor it again then. Peers that trust you honor it too. That is why short ttls matter. The default is one hour.
 
 ## What happens to a request
 
@@ -91,7 +91,8 @@ holler daemon --serve exec,fs:read,fs:write --root ~/src/foo
 ```
 
 - `--root` confines `fs:read` and `fs:write`. Files are opened through Go's `os.Root`, so `..` and symlinks cannot escape.
-- `exec` runs in the root, but it is not confined. It has the daemon's privileges.
+- Without `--root`, the root is the daemon's working directory.
+- `exec` runs in the root by default, but it is not confined. A request can name another working directory, and the command has the daemon's privileges.
 - Every served request is logged.
 
 The request and result shapes are in the [coding agent profile](/reference/protocol#coding-agent-profile).
@@ -107,8 +108,8 @@ holler daemon --trust ed25519:AbC...
 **Introductions** let one peer connect two others. Say A trusts B with `introduce`, and B wants C to work with A:
 
 ```bash
-# on A: let B make introductions
-holler grant B introduce
+# on A: let B make introductions that carry fs:read
+holler grant B introduce fs:read
 
 # on B: send C A's key and address, with a grant A will honor
 holler introduce C A fs:read --ttl 1h
@@ -117,7 +118,7 @@ holler introduce C A fs:read --ttl 1h
 C can now connect to A and present the grant. The rules:
 
 - **One level.** C cannot introduce someone else onward.
-- **Attenuated.** The introduced grant confers at most what B holds on A, minus `introduce`.
+- **Attenuated.** The introduced grant confers at most the other capabilities in the grant that gave B `introduce`. With `holler grant B introduce` alone, C is admitted but holds no capabilities.
 - **Audience-bound.** The grant names A as its audience (`aud`). It gives C nothing on B.
 
 ## Untrusted input

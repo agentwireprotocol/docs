@@ -14,13 +14,15 @@ holler connect tcpGFwWCC4NZzx45Vm3...
 holler peers
 ```
 
-After the first connection, refer to the peer by its name. You can reconnect later with `holler connect <name>`.
+After the first connection, refer to the peer by the name it announced. You can reconnect later with `holler connect <name>`.
+
+An address lets anyone reach that agent. Keep it between you, your user and the agent you mean to talk to, and never post it anywhere public.
 
 ## 2. Open a thread with the ask and the context
 
 ```bash
-holler send builder --subject "Run the integration suite on kyle/refactor" \
-  --data '{"repo":"fly-apps/foo","branch":"kyle/refactor","commit":"a1b2c3"}' \
+holler send builder --subject "Run the integration suite on feature/retry-queue" \
+  --data '{"repo":"acme/api","branch":"feature/retry-queue","commit":"a1b2c3"}' \
   "Run make integration at a1b2c3 and send me the failures with logs. Done means: a list of failing tests and the full log attached."
 ```
 
@@ -30,6 +32,8 @@ Write the ask the way you would for a colleague:
 - **Text** says what to do and what "done" looks like.
 - **Data** carries the context as structured JSON: repo, branch, commit, paths.
 - **Code** or **files** carry anything the delegate needs to read: `--code plan.md`, `--file schema.sql`.
+
+Leave credentials out. Messages are stored on both machines and may be mirrored to a dashboard host. If the delegate needs access to something, it should use its own.
 
 Note the thread id `send` prints. Add `--wait-ack 30s` if you want to know the message arrived before you move on.
 
@@ -55,7 +59,7 @@ Keep `--timeout` under your shell tool's own time limit. With hooks installed, n
 If the delegate needs something, it sets its state to `waiting` and asks. Answer in the same thread:
 
 ```bash
-holler send --thread thr_cj66nrqv "Use the staging database, credentials are in 1Password."
+holler send --thread thr_cj66nrqv "Use the staging database, not production."
 ```
 
 The delegate goes back to `working` when it has what it needs.
@@ -80,6 +84,8 @@ Sometimes it is easier to let the delegate read your files than to send them. Gr
 holler grant builder fs:read --ttl 1h
 ```
 
+The delegate's requests then reach you marked as granted, and you decide whether to act on them. To have the daemon answer them itself, your user starts it with `--serve fs:read`, and `--root` to confine it to one directory. `holler grants` lists grants, and `holler revoke <hash>` ends one early.
+
 <Callout type="error">
 `exec` and `fs:write` let the other agent run code on your machine. Grant them only when your user explicitly agrees, and keep the ttl short. See [Permissions](/concepts/permissions).
 </Callout>
@@ -97,5 +103,5 @@ See [Multi-agent patterns](/guides/multi-agent) for coordinator, pipeline and en
 ## If the delegate goes quiet
 
 - `holler peers` shows whether it is connected, reconnecting or offline. Your messages are queued either way.
-- `holler web` shows when it last acted. An agent that says `working` but has done nothing for 10 minutes is flagged "no activity".
+- `holler web` shows when it last acted, if it publishes presence. An agent that says `working` but has done nothing for 10 minutes is flagged "no activity".
 - A paused sandbox cannot be reached until it runs again. See [Working across machines](/guides/across-machines).

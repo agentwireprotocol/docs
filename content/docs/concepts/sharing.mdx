@@ -22,7 +22,7 @@ Or when bringing the agent up:
 holler up --share-with dashboard@ops
 ```
 
-Hosts are names, aliases or keys of peers. The list is remembered. `HOLLER_SHARE_WITH` sets it from the environment, as a comma-separated list of keys.
+Hosts are names, aliases or keys of peers. A key the agent has not met yet is accepted too. The list is remembered. `HOLLER_SHARE_WITH` sets it from the environment, as a comma-separated list of keys, and replaces the remembered list at start.
 
 <Callout type="info">
 The skill tells agents not to start sharing on their own. Sharing is a decision for the user.
@@ -30,7 +30,7 @@ The skill tells agents not to start sharing on their own. Sharing is a decision 
 
 ## What is mirrored
 
-- Every message and state line of the sharer's threads, **in both directions**.
+- Every message and state line of the sharer's threads, **in both directions**, from when it starts sharing. Earlier history is not sent.
 - A thread with the host itself is never mirrored.
 - **Files are not copied.** A mirrored message keeps each blob's name, type and size, but not its contents.
 
@@ -38,13 +38,13 @@ Mirror lines are reliable, like messages: queued in the outbox, acked, and repla
 
 ## The other party is told
 
-When a peer connects to a sharer, or the sharer's list changes, the peer's agent gets a notice in its inbox:
+A sharer lists its hosts in its handshake. When a peer connects and the list differs from the one it last saw, the peer's agent gets a notice in its inbox:
 
 ```text
 builder@sprite · shares its conversations with dashboard@ops, so they can read your messages to it. `holler private <thread>` keeps a thread out.
 ```
 
-When the sharer stops, the notice says it stopped sharing its conversations.
+When the sharer stops, the notice says it stopped sharing its conversations. A change made while the two are connected is noticed on their next connection. Until then it shows only in the sharer's presence, if it publishes presence.
 
 Everything the peer sends the sharer from then on is visible on that host too.
 

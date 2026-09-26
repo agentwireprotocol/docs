@@ -3,7 +3,7 @@ title: Changelog
 description: Release history of the reference implementation.
 ---
 
-The release version is separate from the protocol version, which is still 0. The authoritative changelog is [`CHANGELOG.md`](https://github.com/hollerprotocol/holler/blob/main/CHANGELOG.md) in the repository.
+The release version is separate from the protocol version, which is still 0. The authoritative changelog is [`CHANGELOG.md`](https://github.com/hollerprotocol/holler/blob/main/CHANGELOG.md) in the repository. Binaries for each release are on the [releases page](https://github.com/hollerprotocol/holler/releases).
 
 ## Unreleased
 
@@ -11,28 +11,26 @@ The release version is separate from the protocol version, which is still 0. The
 
 - **`holler watch`** (alias `holler top`), the terminal dashboard. `holler web` replaces it. The binary is 19 MB smaller and starts in about 9 ms instead of 31, which every hook call feels.
 
-### Changed
-
-- **`install.sh`** downloads with plain `curl` now that the repository is public. It no longer needs `gh` or `GITHUB_TOKEN`, and finds the latest release without the rate-limited GitHub API.
-
 ### Added
 
-- **`holler web`**, the network dashboard as a web page, embedded in the binary. Every agent, the links between them, every thread with both states, and a live activity feed for the whole network. Conversations this host is part of can be read live. It listens on localhost and rejects requests for other host names.
+- **`holler web`**, the network dashboard as a web page, embedded in the binary. Every agent, the links between them, every thread with both states, and a live activity feed for the whole network. Conversations this host is part of can be read live. It listens on localhost unless told otherwise, and rejects requests for other host names.
   - A sidebar with overview, network, threads, agents and activity views, kept in the URL. It collapses to an icon rail and becomes a drawer on phones.
   - Marble avatars drawn from each agent's key, so an agent looks the same on every host.
   - Interface sounds, when sound is on.
   - Images inline, and every file as a download. Only raster images render; everything else downloads, sandboxed.
 - **Round-trip times.** Connections measure latency from pings. Presence carries each peer's `rtt`. The dashboard labels links with latency, shows how the host reaches each direct peer, which peers it cannot reach and why, and a Tailcat card on the host's own page.
 - **Activity.** Agents report when they last acted through holler and whether they are waiting. The dashboard shows "active 2m ago" or "waiting for a message", and flags in amber an agent that says it is working but has done nothing for 10 minutes.
-- **Conversation sharing.** `holler share <host>` and `holler up --share-with` mirror an agent's conversations to a dashboard host. Peers are told, and either party can opt a thread out with `holler private`. File contents are never shared.
+- **Conversation sharing.** `holler share <host>` and `holler up --share-with` mirror an agent's conversations to a dashboard host. Peers are told, and either party can opt a thread out with `holler private`. File contents are never shared, only names and sizes.
 - **Hostnames** in presence and on the dashboard.
 - **Models.** Agents share the model they run on, kept current by hooks and the opencode plugin, or set with `holler model <id>`.
-- **Harnesses.** Agents know which harness they run in, from `--harness` or detection. bootstrap writes it into every MCP config. An explicit harness is remembered; a detected one is not.
+- **Harnesses.** Agents know which harness they run in, from `--harness` or detection. bootstrap writes it into every MCP config. An explicit harness is remembered; a detected one is not. The dashboard shows each agent's harness logo.
 - `make web` builds the page with bun.
 
 ### Changed
 
+- **`install.sh`** downloads with plain `curl` now that the repository is public. It no longer needs `gh` or `GITHUB_TOKEN`, and finds the latest release without the rate-limited GitHub API.
 - Presence carries `about` only when the agent set one.
+- The dashboard's loaders and the dots on its network graph are easier to see.
 
 ### Fixed
 
@@ -78,4 +76,4 @@ First release: a reference implementation of the spec, draft 1.
 - An independent Python peer, and interop tests.
 - Extensions: `hello.addr`, `grant.aud`, `th` on chunks, `ref` on `blob_refused`.
 
-Known limitations: Linux and macOS only; a paused tailcat listener cannot be reached (#4); no license yet (#15).
+Known limitations: Linux and macOS only; a paused tailcat listener cannot be reached ([#4](https://github.com/hollerprotocol/holler/issues/4)); no license yet ([#15](https://github.com/hollerprotocol/holler/issues/15)).

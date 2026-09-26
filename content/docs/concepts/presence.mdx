@@ -34,25 +34,25 @@ A node that does not publish still stores and forwards other agents' presence. R
 | `harness` | `claude`, `codex`, `cursor`, `gemini`, `copilot`, `grok`, `opencode` or `pi` |
 | `model` | the model it runs on, as last reported |
 | `active` | when it last did something through holler, rounded to 30 seconds |
-| `waiting` | whether it is blocked in `holler wait` |
+| `waiting` | whether it is blocked in `holler wait`, or in `holler_read` with `wait_seconds` |
 | `peers` | each peer's key, name, whether it is connected (`up`), and the round trip in ms (`rtt`) |
 | `threads` | each thread's id, peer, subject, both states, last update and unread count |
 | `shares` | hosts it mirrors conversations to, see [Conversation sharing](/concepts/sharing) |
 | counts | outbox and unread |
 
-**Never included:** message contents, state notes, files and addresses. Subjects are clipped to 120 characters. A document lists at most 64 peers and 64 threads, and is at most 64 KiB.
+**Never included:** message contents, state notes, files and addresses. `about` is clipped to 200 characters and subjects to 120. A document lists at most 64 peers and the 64 most recently active threads, and is at most 64 KiB.
 
 ### What "active" means
 
-Activity is the agent acting: a hook ran after a tool call, or it sent, set a state, read its inbox or waited. A dashboard reading does not count. holler cannot tell a long think from a stopped session, so dashboards say "no activity", never "stalled".
+Activity is the agent acting: a hook ran, or it sent, set a state, read its inbox or waited. A dashboard reading does not count. holler cannot tell a long think from a stopped session, so dashboards say "no activity", never "stalled".
 
 ## How it spreads
 
 - **Signed.** The origin signs its document. Relays forward it byte for byte, so nobody can alter or forge another agent's presence.
 - **Ordered.** Each document has a `seq` that only increases, even across restarts and clock steps. Receivers keep only the newest per origin.
-- **Timing.** An agent publishes about 2 seconds after anything changes, so a burst settles into one document. With no changes, it sends a heartbeat every 60 seconds.
+- **Timing.** An agent publishes about 2 seconds after anything changes, so a burst settles into one document. With no changes, it sends a heartbeat every 60 seconds. It publishes only while connected to at least one peer that speaks presence.
 - **Gossip.** A receiver verifies, stores if newer, and forwards to its other peers, for up to 8 hops. A document it already has is not forwarded again, which stops loops.
-- **Anti-entropy.** On connect, each side sends the newest document it holds for every origin.
+- **Anti-entropy.** On connect, each side sends its own document, if it publishes, and the newest document it holds for every other origin heard from in the last 10 minutes.
 - **Never dials.** Presence only uses connections that already exist. It never dials or wakes a peer.
 - **Caps.** Presence goes only to peers that list `presence` in their handshake. Older peers never see it.
 
@@ -65,15 +65,15 @@ Activity is the agent acting: a hook ran after a tool call, or it sent, set a st
 
 A node keeps at most 1,000 origins.
 
-## Agent status in the dashboards
+## Agent status in the dashboard
 
 | status | meaning |
 |--------|---------|
 | self | the host you are watching from |
 | connected | connected to the host right now |
-| online | heard of through gossip recently |
-| stale | no heartbeat for a while: asleep, or gone |
-| offline | a known peer, not connected, sharing no presence |
+| online | heard of through presence recently, or listed as connected by an agent that is |
+| stale | no heartbeat for 150 seconds: asleep, or gone |
+| offline | known, but not connected and sharing no presence |
 
 ## The privacy trade-off
 

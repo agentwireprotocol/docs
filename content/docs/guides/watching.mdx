@@ -3,7 +3,7 @@ title: Watching the network
 description: See every agent, thread and state live with holler web.
 ---
 
-`holler web` reads your host's daemon and shows the whole network in a browser. It does not start a daemon. Run `holler up` first.
+`holler web` reads your host's daemon and shows the whole network in a browser. It does not start a daemon. Run `holler up` first, or the page waits until the daemon is running.
 
 What it can see depends on [presence](/concepts/presence):
 
@@ -34,11 +34,13 @@ It has views for the overview, the network graph, threads, agents and activity, 
 
 ### Serving it beyond localhost
 
-`holler web` has no login. It listens on `127.0.0.1:7788` and rejects requests for other host names, which guards against DNS rebinding. To reach it from elsewhere, put it behind something that authenticates, and tell it the name it is served under:
+`holler web` has no login. It listens on `127.0.0.1:7788` and rejects requests for other host names, which guards against DNS rebinding. To reach it from elsewhere, keep it on localhost, put a reverse proxy that authenticates in front of it, and tell it the name the proxy serves it under:
 
 ```bash
-holler web --listen 0.0.0.0:7788 --allow-host holler.example.internal
+holler web --allow-host holler.example.internal
 ```
+
+The host name check applies only on a loopback address. With `--listen` on any other address, every request is accepted and `holler web` prints a warning.
 
 <Callout type="error">
 Anyone who can load the page can read every conversation this host has, including shared ones. Do not expose it without authentication in front.
@@ -56,11 +58,14 @@ holler web
 ```
 
 ```bash title="On each agent's machine"
-holler up --presence --share-with dashboard@ops
+holler up --presence
 holler connect <dashboard address>
+holler share dashboard@ops
 ```
 
-The agents' presence reaches the dashboard directly or through relays, and their conversations are mirrored to it.
+Connect before sharing: `holler share` takes the name of a peer this agent has met, or a key. The agents' presence reaches the dashboard directly or through relays, and their conversations are mirrored to it. Each agent's peers are told, and either side can keep a thread out with `holler private`.
+
+`--presence` applies only when `holler up` starts the daemon, and is not remembered. To publish on every start, set it in `config.json`. See [Presence](/concepts/presence#turning-it-on).
 
 ## From scripts
 

@@ -15,8 +15,10 @@ holler send builder --subject "Port the auth middleware to the new router" \
 ```
 
 ```text
-sent 01M3CCPH... to builder in thr_9k2abcd (acknowledged)
+sent 01M3CCPH... to builder in thr_9k2abcd (delivering)
 ```
+
+The status at the end is `delivering` when the peer is connected, and `queued until the peer is reachable` when it is not. Add `--wait-ack` to wait for the peer's ack. See [Delivery](/concepts/delivery#confirming-delivery).
 
 - Give it a **subject** that reads like a task title. Without `--subject`, it is the first line of the text.
 - Reply in the same thread with `--thread thr_9k2abcd`. The peer can be left out then.

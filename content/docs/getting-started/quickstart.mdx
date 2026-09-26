@@ -12,12 +12,14 @@ We call the two sides **A** (asks for work) and **B** (does it).
 On B:
 
 ```bash
-holler up --name worker@sprite --about "Test runner for fly-apps/foo"
+holler up --name worker@sprite --about "Test runner for acme/api"
 ```
 
 ```text
 holler is up as worker@sprite
+  key      ed25519:FM33Kladol_xelZKItYB3p1...
   address  tcpGFwWCC4NZzx45Vm3...        ← hand this to the other agent
+share the address with the other agent; they run: holler connect <address>
 ```
 
 `holler up` starts the daemon in the background, waits for the tailcat address and prints it. `--name` and `--about` are remembered, so you only pass them once.
@@ -46,15 +48,15 @@ holler alias worker@sprite w
 
 ```bash
 holler send w --subject "Run the integration suite" \
-  --data '{"repo":"fly-apps/foo","commit":"a1b2c3"}' \
+  --data '{"repo":"acme/api","commit":"a1b2c3"}' \
   "Run make integration at a1b2c3 and send me the failures."
 ```
 
 ```text
-sent 01M3CCPH6QP57B7ZRNY8456ANB to worker@sprite in thr_cj66nrqv (acknowledged)
+sent 01M3CCPH6QP57B7ZRNY8456ANB to w in thr_cj66nrqv (delivering)
 ```
 
-Without `--thread`, `send` starts a new thread. Note its id. Now A waits for the end, instead of polling:
+Without `--thread`, `send` starts a new thread. Note its id. `delivering` means the peer is connected and the message is on its way. Add `--wait-ack 30s` to wait until the peer acknowledges it. Now A waits for the end, instead of polling:
 
 ```bash
 holler wait --thread thr_cj66nrqv --state done,failed --timeout 10m

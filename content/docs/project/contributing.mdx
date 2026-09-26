@@ -3,7 +3,11 @@ title: Contributing
 description: Build, test and release holler.
 ---
 
-The source is at [github.com/hollerprotocol/holler](https://github.com/hollerprotocol/holler).
+The source is at [github.com/hollerprotocol/holler](https://github.com/hollerprotocol/holler). The repository is public. Report bugs and propose changes in [issues](https://github.com/hollerprotocol/holler/issues), and send code as pull requests.
+
+<Callout type="info">
+The repository has no license yet. Choosing one is tracked in [#15](https://github.com/hollerprotocol/holler/issues/15).
+</Callout>
 
 ## Layout
 
@@ -15,11 +19,15 @@ The source is at [github.com/hollerprotocol/holler](https://github.com/hollerpro
 | `internal/store` | SQLite storage |
 | `internal/transport` | tailcat, TCP and Unix bindings |
 | `internal/mcp` | the MCP server |
-| `internal/bootstrap` | harness detection and setup |
-| `internal/web`, `web/` | `holler web`: the Go server and the page |
+| `internal/control`, `internal/api` | the local API between the daemon and its clients |
+| `internal/bootstrap` | `holler bootstrap`: installing holler into each harness |
+| `internal/harness` | harness names and detection from the environment |
+| `internal/render` | how the CLI, hooks and MCP server print messages |
+| `internal/web`, `web/` | `holler web`: the Go server and the page (React, built with bun) |
 | `wire/` | message types, framing, ULIDs, canonical JSON, grants; importable by other Go peers |
 | `plugin/holler/` | the agent plugin: skill, MCP config, hooks |
 | `python/` | the independent Python peer and interop tests |
+| `scripts/` | release scripts: artifacts, version checks, release notes |
 | `SPEC.md`, `PROFILE.md`, `NOTES.md` | the protocol, the coding agent profile, implementation notes |
 
 ```text
@@ -31,17 +39,19 @@ hook ─┘   (local control API)       │                     └─ unix:/pat
 
 ## Build and test
 
-You need Go 1.27 or later.
+You need Go 1.27 or later. The Python tests need Python 3 with the `cryptography` package. The web page needs [bun](https://bun.sh).
 
 ```bash
 make test      # go vet, go test -race, the Python peer's tests, Go↔Python interop
 make build     # ./bin/holler
 make web       # build the web page with bun, embedded by the next build
 make plugin    # plugin/holler/libexec/holler-{linux,darwin}-{amd64,arm64}
-make dist      # release artifacts in dist/
+make dist      # release artifacts in dist/ (needs make web first)
 ```
 
-CI runs all of that on every push and pull request.
+Without `make web`, the binary builds and `holler web` serves only its API.
+
+CI runs on every push to `main` and every pull request. It checks `gofmt`, typechecks and lints the web page, runs `go vet`, the Go tests with the race detector, the Python tests and interop, and cross-compiles the release artifacts.
 
 The test suite covers:
 
@@ -61,7 +71,7 @@ The Python peer was written from `SPEC.md` alone, without reading the Go code. W
 ## Releasing
 
 1. Add a section to `CHANGELOG.md`.
-2. Set `version` in both plugin manifests.
+2. Set `version` in both plugin manifests: `plugin/holler/plugin.json` and `plugin/holler/.claude-plugin/plugin.json`.
 3. Push a tag:
 
 ```bash
@@ -82,4 +92,4 @@ Because the wire is NDJSON over tailcat's port 1, you can talk to a peer by hand
 
 ## Discussions
 
-Design happens in issues. See [Roadmap](/project/roadmap) for the open threads.
+Design happens in [issues](https://github.com/hollerprotocol/holler/issues). See [Roadmap](/project/roadmap) for the open threads.

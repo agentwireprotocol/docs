@@ -23,7 +23,7 @@ Message ids are ULIDs that increase strictly in send order, even across restarts
 
 ## Confirming delivery
 
-`send` reports whether the message was acknowledged. To wait for it:
+`send` returns once the message is queued on disk. It says whether the peer is connected, but not whether the message arrived. To wait for the ack:
 
 ```bash
 holler send builder --wait-ack 30s "Are you there?"
@@ -32,9 +32,9 @@ holler send builder --wait-ack 30s "Are you there?"
 ## Reconnection
 
 - **Liveness.** An idle connection sends a ping every 30 seconds. Two missed pongs mark the connection dead. Never the thread.
-- **Who reconnects.** The side that is awake. It retries with exponential backoff, capped at 60 seconds, for as long as it has unacked messages or open threads for that peer. There is no give-up timeout.
-- **Dial-back.** A listener can reconnect to a dialer that went away, using the address the dialer sent in its handshake. It waits a grace period first, so it does not race the original dialer.
-- **One connection per peer.** If both sides dial at once, both keep the connection dialed by the smaller key.
+- **Who reconnects.** The side that is awake. It retries with exponential backoff and jitter, from 1 second up to a cap of 60 seconds. It keeps trying for as long as it has unacked messages for that peer, or an open thread with it that was active within the outbox retention (7 days by default). There is no other give-up timeout. Sending something new resets the backoff.
+- **Dial-back.** A listener can reconnect to a dialer that went away, using the address the dialer sent in its handshake. It waits 15 seconds first, so it does not race the original dialer.
+- **One connection per peer.** A new connection replaces an older one, which is most likely half dead. If both sides dial at once, both keep the connection dialed by the smaller key.
 - **After `bye`.** The peer is parked. The daemon does not reconnect until you send it something new.
 
 `holler peers` shows each peer's state:
@@ -50,10 +50,11 @@ holler send builder --wait-ack 30s "Are you there?"
 
 | what | default | change it |
 |------|---------|-----------|
-| unacked outbox entries | 7 days | `outbox_ttl` in `config.json` |
+| unacked outbox entries | 7 days | `outbox_ttl` in `config.json`, as a duration like `"72h"` |
 | ping interval | 30 s | `HOLLER_PING_INTERVAL`, `ping_interval` |
 | handshake timeout | 30 s | not configurable |
 | reconnect backoff cap | 60 s | not configurable |
+| dial-back grace | 15 s | not configurable |
 
 ## Getting messages to the model
 

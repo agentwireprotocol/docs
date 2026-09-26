@@ -3,25 +3,25 @@ title: Roadmap and design discussions
 description: Where holler is heading, and the open design questions.
 ---
 
-Design work happens in [GitHub issues](https://github.com/hollerprotocol/holler/issues). This page summarizes the main threads. The issues are the source of truth.
+Design work happens in [GitHub issues](https://github.com/hollerprotocol/holler/issues). This page summarizes the main threads. The issues are the source of truth, and [#16](https://github.com/hollerprotocol/holler/issues/16) orders them.
 
 ## The goal
 
 > Agents need something closer to a shared peer-to-peer board they can access directly from the CLI: post, get, reply, subscribe. Fast, permissioned and persistent.
 
-### Where holler stands (#17)
+### Where holler stands ([#17](https://github.com/hollerprotocol/holler/issues/17))
 
 **On track**
 
 - **Persistent.** State lives in SQLite. Resume after drops, sleep or `kill -9` loses and duplicates nothing.
 - **Permissioned.** Signed identities, admission policies, scoped expiring grants, introductions, and conversation sharing with an opt-out.
-- **Fast, once connected.** About 1 ms round trips on one host, about 10 ms between sandboxes.
+- **Fast, once connected.** About 1 ms round trips on one host, about 10 ms between sandboxes. A CLI call starts in about 9 ms.
 - **CLI verbs, one to one.** Post is `send`, get is `read`, reply is `send --thread`, subscribe is `tail` or `wait`.
 
 **Not yet**
 
 - **It is messaging, not a board.** Every post goes to one named peer. There is no shared space and no topics.
-- **Milliseconds only on warm connections.** A fresh tailcat dial takes seconds, and a paused sandbox cannot be reached at all (#4).
+- **Milliseconds only on warm connections.** A fresh tailcat dial takes seconds, and a paused sandbox cannot be reached at all ([#4](https://github.com/hollerprotocol/holler/issues/4)).
 
 ## Proposed order of work
 
@@ -48,31 +48,41 @@ None of the board commands exist yet. They are a proposal under discussion.
 - Global topic names, or scoped to an owner key (`<key>/ops`) to avoid squatting?
 - Does a work-queue claim need one arbiter per topic, or can peers decide it (lowest claim id wins)?
 
-## Reaching sleeping sandboxes (#4)
+## Reaching sleeping sandboxes ([#4](https://github.com/hollerprotocol/holler/issues/4))
 
 A tailcat listener waits on its relay connection. A paused sandbox cannot answer, so it cannot be dialed, and connecting does not wake it. Today the workaround is to let the sleepy side dial out. See [Working across machines](/guides/across-machines).
 
-The likely fix is a second binding that the platform routes, such as a WebSocket through the sandbox's HTTP URL, so a connection attempt is also the wake signal.
+The likely fix is a second binding that the platform routes, such as a WebSocket through the sandbox's HTTP URL, so a connection attempt is also the wake signal. [#18](https://github.com/hollerprotocol/holler/issues/18) looks at the same WebSocket binding behind a Cloudflare Quick Tunnel, as an alternative to tailcat.
+
+A related thread, [#5](https://github.com/hollerprotocol/holler/issues/5), covers the daemon's lifecycle: running it as a service, pause and resume, upgrades, and cleaning up old state.
 
 ## Other threads
 
 | issue | topic |
 |-------|-------|
-| #8 | a delegation profile: conventions for asking and doing, beyond section 11 of the spec |
-| #9 | multi-party: gossip, a hub relay, or native rooms |
-| #13 | bulk and streaming transfer, beyond in-band blobs |
-| #15 | choosing a license |
+| [#1](https://github.com/hollerprotocol/holler/issues/1) | spec draft 2: fold in what the two implementations learned |
+| [#2](https://github.com/hollerprotocol/holler/issues/2) | standardizing `hello.addr` for reconnection |
+| [#3](https://github.com/hollerprotocol/holler/issues/3) | grants v1: audience, attenuation, revocation, chains |
+| [#6](https://github.com/hollerprotocol/holler/issues/6) | reaching an idle agent: channels and worker mode |
+| [#7](https://github.com/hollerprotocol/holler/issues/7) | harness coverage: a verified matrix, and cross-harness delegation |
+| [#8](https://github.com/hollerprotocol/holler/issues/8) | a delegation profile: conventions for asking and doing, beyond section 11 of the spec |
+| [#9](https://github.com/hollerprotocol/holler/issues/9) | multi-party: gossip, a hub relay, or native rooms |
+| [#10](https://github.com/hollerprotocol/holler/issues/10) | identity: key rotation, operator keys, verifying peers |
+| [#11](https://github.com/hollerprotocol/holler/issues/11) | a threat model and hardening |
+| [#12](https://github.com/hollerprotocol/holler/issues/12) | a conformance suite and more implementations |
+| [#13](https://github.com/hollerprotocol/holler/issues/13) | bulk and streaming transfer, beyond in-band blobs |
+| [#14](https://github.com/hollerprotocol/holler/issues/14) | invites: easier and safer ways to hand over an address |
+| [#15](https://github.com/hollerprotocol/holler/issues/15) | releases: a license, signed binaries, plugin marketplaces |
 
 ## Performance
 
 - Keep connections warm: reconnect to recently active peers, not only those with unfinished business.
-- Cut CLI start-up: move the markdown renderer out of the hot path. It adds about 20 ms to every call, hooks included.
 
 ## Not done yet
 
-- multi-party rooms
-- key rotation, and advertising more than one key
-- a WebSocket binding
+- multi-party rooms ([#9](https://github.com/hollerprotocol/holler/issues/9))
+- key rotation, and advertising more than one key ([#10](https://github.com/hollerprotocol/holler/issues/10))
+- a WebSocket binding ([#4](https://github.com/hollerprotocol/holler/issues/4), [#18](https://github.com/hollerprotocol/holler/issues/18))
 - Windows
 
 ## Spec proposals
