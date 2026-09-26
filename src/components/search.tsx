@@ -19,8 +19,17 @@ export default function SearchDialog({ open, onOpenChange, dialogHandle }: Share
     <>
       {/* Fumadocs' search buttons are Base UI dialog triggers bound to this
           handle. A root with no popup turns their clicks into open state;
-          jevsearch draws the dialog. */}
-      <Dialog.Root handle={dialogHandle} open={open} onOpenChange={(next) => onOpenChange(next)} modal={false} />
+          jevsearch draws the dialog. The root only ever opens it: it takes
+          any click in jevsearch's panel for a click outside, and jevsearch
+          handles closing itself. */}
+      <Dialog.Root
+        handle={dialogHandle}
+        open={open}
+        onOpenChange={(next) => {
+          if (next) onOpenChange(true);
+        }}
+        modal={false}
+      />
       <JevSearchDialog
         open={open}
         onOpenChange={onOpenChange}
