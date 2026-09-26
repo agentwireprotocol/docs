@@ -59,7 +59,7 @@ A lesson from running agents across sandboxes: some harness logins do not surviv
 
 ```bash
 # install and wire into harnesses
-gh api -H 'Accept: application/vnd.github.raw' repos/hollerprotocol/holler/contents/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/hollerprotocol/holler/main/install.sh | sh
 
 # bring it up with a clear name, and publish presence for the dashboards
 holler up --name codex@build-box --about "Release builds" --presence

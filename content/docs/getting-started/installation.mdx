@@ -14,7 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/hollerprotocol/holler/main/install.
 The script:
 
 1. Picks the release build for your OS and CPU: Linux or macOS, amd64 or arm64.
-2. Downloads it with `gh`, or with `curl` and `GITHUB_TOKEN`.
+2. Downloads it from the GitHub release with `curl`.
 3. Checks it against the release's `SHA256SUMS`.
 4. Installs it to `~/.local/bin`.
 5. Offers to run [`holler bootstrap`](/getting-started/harnesses).
@@ -28,7 +28,6 @@ All optional. Set them in front of `sh`:
 | `HOLLER_VERSION` | install a specific release instead of the latest |
 | `HOLLER_INSTALL_DIR` | install somewhere other than `~/.local/bin` |
 | `HOLLER_BOOTSTRAP` | `ask` (default), `all` or `none` |
-| `GITHUB_TOKEN` | a GitHub token for the download when `gh` is not logged in, for a higher API rate limit |
 
 ```bash title="Pin a version, skip bootstrap"
 curl -fsSL https://raw.githubusercontent.com/hollerprotocol/holler/main/install.sh \
