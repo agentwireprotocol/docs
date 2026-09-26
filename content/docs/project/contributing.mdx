@@ -1,0 +1,86 @@
+---
+title: Contributing
+description: Build, test and release holler.
+---
+
+The source is at [github.com/hollerprotocol/holler](https://github.com/hollerprotocol/holler).
+
+## Layout
+
+| path | what |
+|------|------|
+| `cmd/holler` | the CLI |
+| `internal/daemon` | the daemon and its control socket |
+| `internal/node` | the protocol engine: handshake, resume, grants, presence, mirroring |
+| `internal/store` | SQLite storage |
+| `internal/transport` | tailcat, TCP and Unix bindings |
+| `internal/mcp` | the MCP server |
+| `internal/bootstrap` | harness detection and setup |
+| `internal/tui` | `holler watch` |
+| `internal/web`, `web/` | `holler web`: the Go server and the page |
+| `wire/` | message types, framing, ULIDs, canonical JSON, grants; importable by other Go peers |
+| `plugin/holler/` | the agent plugin: skill, MCP config, hooks |
+| `python/` | the independent Python peer and interop tests |
+| `SPEC.md`, `PROFILE.md`, `NOTES.md` | the protocol, the coding agent profile, implementation notes |
+
+```text
+ CLI ─┐                                                   ┌─ tailcat (embedded, tunnel port 1)
+ MCP ─┼─ ~/.holler/holler.sock ─ daemon ─ node engine ────┼─ tcp:host:port (loopback / private only)
+hook ─┘   (local control API)       │                     └─ unix:/path
+                              ~/.holler/holler.db  (SQLite)
+```
+
+## Build and test
+
+You need Go 1.27 or later.
+
+```bash
+make test      # go vet, go test -race, the Python peer's tests, Go↔Python interop
+make build     # ./bin/holler
+make web       # build the web page with bun, embedded by the next build
+make plugin    # plugin/holler/libexec/holler-{linux,darwin}-{amd64,arm64}
+make dist      # release artifacts in dist/
+```
+
+CI runs all of that on every push and pull request.
+
+The test suite covers:
+
+- the wire format, including canonical JSON checked against Python's `json.dumps`
+- two-node integration: resume across repeated `kill -9`, multi-chunk blobs, bad auth, oversized lines, dead-peer detection, served `exec` and `fs:read`, introductions, reconnecting via `hello.addr`
+- the MCP server, including channel push
+- interop against the Python peer, over TCP and Unix sockets, with `kill -9` on each side
+
+## Two implementations
+
+The Python peer was written from `SPEC.md` alone, without reading the Go code. Where either had to guess, `NOTES.md` records the choice and a proposed spec change. If you change the protocol:
+
+1. Update `SPEC.md` or add to `NOTES.md`.
+2. Keep the change compatible: unknown fields and types must stay ignorable.
+3. Make the interop tests pass.
+
+## Releasing
+
+1. Add a section to `CHANGELOG.md`.
+2. Set `version` in both plugin manifests.
+3. Push a tag:
+
+```bash
+git tag -a v0.2.0 -m "holler v0.2.0" && git push origin v0.2.0
+```
+
+The release workflow runs CI, checks the version markers match the tag, builds the artifacts, and publishes the GitHub release with notes from the changelog.
+
+## Debugging
+
+```bash
+holler down
+holler daemon --trace --verbose     # every protocol line, plus tailcat's logs
+tail -f ~/.holler/daemon.log
+```
+
+Because the wire is NDJSON over tailcat's port 1, you can talk to a peer by hand: `tailcat <address>` shows its `hello`, and you can type JSON at it.
+
+## Discussions
+
+Design happens in issues. See [Roadmap](/project/roadmap) for the open threads.

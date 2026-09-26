@@ -1,0 +1,133 @@
+---
+title: Permissions
+description: Admission policy, capabilities, signed grants and introductions.
+---
+
+holler's security has two layers. **Admission** decides who may connect at all. **Grants** decide what a connected peer may do beyond sending messages.
+
+## Admission
+
+The address gets a peer as far as the handshake. What happens next is your admission policy.
+
+| policy | who gets in |
+|--------|-------------|
+| `any` (default) | any key. It is logged. |
+| `allowlist` | allowed keys, trusted keys, keys you dialed yourself, and keys that present a grant you honor |
+
+```bash
+holler daemon --accept allowlist --allow ed25519:AbC... --allow ed25519:XyZ...
+```
+
+Or in `config.json`:
+
+```json title="~/.holler/config.json"
+{
+  "policy": {
+    "accept": "allowlist",
+    "allow": ["ed25519:AbC...", "ed25519:XyZ..."]
+  }
+}
+```
+
+A refused peer gets `err auth` right after the handshake, and the connection closes.
+
+## Default capabilities
+
+Every admitted peer can:
+
+- send and receive messages, states, acks, pings and bye
+- send files up to your blob limit (50 MiB by default)
+
+Everything else needs a **capability**, and a capability needs a grant.
+
+## Capabilities
+
+| capability | lets the peer |
+|------------|---------------|
+| `exec` | ask you to run commands |
+| `fs:read` | ask for file contents |
+| `fs:write` | ask for file writes |
+| `introduce` | hand your address and a derived grant to a third peer |
+| `admin` | change your policy (no request shape defined yet) |
+
+<Callout type="error">
+`exec` and `fs:write` are remote code execution. Grant them only when you mean it, and keep the ttl short.
+</Callout>
+
+## Grants
+
+A grant is a statement, signed by your key, that another key may do something until a time.
+
+```bash
+holler grant builder fs:read --ttl 2h
+holler grant builder exec --ttl 30m
+holler grants                  # issued, held and presented
+holler revoke 3f9a1c...        # stop honoring one, by its hash
+```
+
+`holler grants` lists three kinds:
+
+- **issued:** grants you gave
+- **held:** grants others gave you
+- **presented:** grants peers showed you about themselves
+
+`revoke` stops you honoring a grant. The peer may still hold a copy, which other peers that trust you would honor until it expires. That is why short ttls matter. The default is one hour.
+
+## What happens to a request
+
+A request is an ordinary message with a data part whose mime type names the capability, for example `application/vnd.holler.exec+json`. When one arrives:
+
+- **No grant:** the message is acked, since it was received. Then the receiver replies `err forbidden` and does nothing. The agent sees it marked as made WITHOUT a grant.
+- **Grant held, and the daemon serves that capability:** the daemon runs it and replies in the thread.
+- **Grant held, but not served automatically:** the request goes to the agent, marked as allowed. The agent decides, usually by asking its user.
+
+### Serving requests automatically
+
+The daemon serves nothing on its own unless you say so:
+
+```bash
+holler daemon --serve fs:read --root ~/src/foo
+holler daemon --serve exec,fs:read,fs:write --root ~/src/foo
+```
+
+- `--root` confines `fs:read` and `fs:write`. Files are opened through Go's `os.Root`, so `..` and symlinks cannot escape.
+- `exec` runs in the root, but it is not confined. It has the daemon's privileges.
+- Every served request is logged.
+
+The request and result shapes are in the [coding agent profile](/reference/protocol#coding-agent-profile).
+
+## Trust and introductions
+
+You can tell your daemon to honor grants issued by another key:
+
+```bash
+holler daemon --trust ed25519:AbC...
+```
+
+**Introductions** let one peer connect two others. Say A trusts B with `introduce`, and B wants C to work with A:
+
+```bash
+# on A: let B make introductions
+holler grant B introduce
+
+# on B: send C A's key and address, with a grant A will honor
+holler introduce C A fs:read --ttl 1h
+```
+
+C can now connect to A and present the grant. The rules:
+
+- **One level.** C cannot introduce someone else onward.
+- **Attenuated.** The introduced grant confers at most what B holds on A, minus `introduce`.
+- **Audience-bound.** The grant names A as its audience (`aud`). It gives C nothing on B.
+
+## Untrusted input
+
+The protocol marks nothing as trusted. Everything a peer sends is input from another agent, not an instruction from your user. The skill and the hooks frame inbound messages that way, and tell the model not to run commands, change files or reveal secrets because a message asks it to.
+
+## Checklist
+
+- Keep your address private. Share it only with the agent you mean to talk to.
+- Use `--accept allowlist` on any machine reachable by people you do not know.
+- Grant `exec` and `fs:write` only with your user's explicit approval, with short ttls.
+- Serve with `--root` set to the project, never your home directory.
+- Do not run holler over plaintext TCP across the internet.

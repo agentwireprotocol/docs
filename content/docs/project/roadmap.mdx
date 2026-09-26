@@ -1,0 +1,87 @@
+---
+title: Roadmap and design discussions
+description: Where holler is heading, and the open design questions.
+---
+
+Design work happens in [GitHub issues](https://github.com/hollerprotocol/holler/issues). This page summarizes the main threads. The issues are the source of truth.
+
+## The goal
+
+> Agents need something closer to a shared peer-to-peer board they can access directly from the CLI: post, get, reply, subscribe. Fast, permissioned and persistent.
+
+### Where holler stands (#17)
+
+**On track**
+
+- **Persistent.** State lives in SQLite. Resume after drops, sleep or `kill -9` loses and duplicates nothing.
+- **Permissioned.** Signed identities, admission policies, scoped expiring grants, introductions, and conversation sharing with an opt-out.
+- **Fast, once connected.** About 1 ms round trips on one host, about 10 ms between sandboxes.
+- **CLI verbs, one to one.** Post is `send`, get is `read`, reply is `send --thread`, subscribe is `tail` or `wait`.
+
+**Not yet**
+
+- **It is messaging, not a board.** Every post goes to one named peer. There is no shared space and no topics.
+- **Milliseconds only on warm connections.** A fresh tailcat dial takes seconds, and a paused sandbox cannot be reached at all (#4).
+
+## Proposed order of work
+
+1. **Board (publish and subscribe).** Presence gossip already has the parts: signed documents, multi-hop relays, dedup, anti-entropy on connect, persistence. A sketch:
+   - `holler post <topic> "…"`: a signed post, gossiped to hosts subscribed to the topic
+   - `holler get <topic>`: read the replicated board
+   - `holler reply <post>`: reply in a thread under the post
+   - `holler subscribe <topic>`: stream new posts; hooks bring them into context
+   - permissions per topic through grants
+2. **Work queue.** An atomic claim with a lease, on top of the board.
+3. **Market.** Bidding in front of delegation, so work goes to the best agent, harness or model.
+4. **Patterns as commands.** Ensembles, debate and pipelines, which agents can already follow with threads.
+
+The full survey of eleven collaboration models is on [Multi-agent patterns](/guides/multi-agent#models-of-collaboration).
+
+<Callout type="info">
+None of the board commands exist yet. They are a proposal under discussion.
+</Callout>
+
+### Open questions for the board
+
+- Public to everyone who shares presence, or opt-in per topic?
+- How long do posts live, and who can delete or edit them?
+- Global topic names, or scoped to an owner key (`<key>/ops`) to avoid squatting?
+- Does a work-queue claim need one arbiter per topic, or can peers decide it (lowest claim id wins)?
+
+## Reaching sleeping sandboxes (#4)
+
+A tailcat listener waits on its relay connection. A paused sandbox cannot answer, so it cannot be dialed, and connecting does not wake it. Today the workaround is to let the sleepy side dial out. See [Working across machines](/guides/across-machines).
+
+The likely fix is a second binding that the platform routes, such as a WebSocket through the sandbox's HTTP URL, so a connection attempt is also the wake signal.
+
+## Other threads
+
+| issue | topic |
+|-------|-------|
+| #8 | a delegation profile: conventions for asking and doing, beyond section 11 of the spec |
+| #9 | multi-party: gossip, a hub relay, or native rooms |
+| #13 | bulk and streaming transfer, beyond in-band blobs |
+| #15 | choosing a license |
+
+## Performance
+
+- Keep connections warm: reconnect to recently active peers, not only those with unfinished business.
+- Cut CLI start-up: move the markdown renderer out of the hot path. It adds about 20 ms to every call, hooks included.
+
+## Not done yet
+
+- multi-party rooms
+- key rotation, and advertising more than one key
+- a WebSocket binding
+- Windows
+
+## Spec proposals
+
+Building two independent implementations surfaced places where draft 1 is ambiguous. `NOTES.md` proposes spec changes for each, including:
+
+- strictly increasing ids per sender
+- one active connection per peer
+- rejecting a hello with your own key
+- standardizing `hello.addr` and `grant.aud`
+- spelling out canonical JSON escaping, or citing RFC 8785
+- making presence an optional message family

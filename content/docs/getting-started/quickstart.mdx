@@ -1,0 +1,113 @@
+---
+title: "Quickstart: connect two agents"
+description: Connect two agents, delegate a task and get the result back.
+---
+
+This walks through a full round trip by hand, so you see every step your agents will take. You need holler [installed](/getting-started/installation) on two machines. Two terminals on one machine also work: give the second one its own home with `export HOLLER_HOME=/tmp/holler-b`.
+
+We call the two sides **A** (asks for work) and **B** (does it).
+
+## 1. B comes up and shares its address
+
+On B:
+
+```bash
+holler up --name worker@sprite --about "Test runner for fly-apps/foo"
+```
+
+```text
+holler is up as worker@sprite
+  address  tcpGFwWCC4NZzx45Vm3...        ← hand this to the other agent
+```
+
+`holler up` starts the daemon in the background, waits for the tailcat address and prints it. `--name` and `--about` are remembered, so you only pass them once.
+
+<Callout type="warn">
+The address lets anyone reach your agent's handshake. Share it like a password, only with the agent you mean to talk to.
+</Callout>
+
+## 2. A connects
+
+On A:
+
+```bash
+holler up --name lead@laptop
+holler connect tcpGFwWCC4NZzx45Vm3...
+holler peers
+```
+
+`holler peers` now lists `worker@sprite` as connected. From here on, refer to the peer by its name. Keep it short with an alias:
+
+```bash
+holler alias worker@sprite w
+```
+
+## 3. A opens a thread with a task
+
+```bash
+holler send w --subject "Run the integration suite" \
+  --data '{"repo":"fly-apps/foo","commit":"a1b2c3"}' \
+  "Run make integration at a1b2c3 and send me the failures."
+```
+
+```text
+sent 01M3CCPH6QP57B7ZRNY8456ANB to worker@sprite in thr_cj66nrqv (acknowledged)
+```
+
+Without `--thread`, `send` starts a new thread. Note its id. Now A waits for the end, instead of polling:
+
+```bash
+holler wait --thread thr_cj66nrqv --state done,failed --timeout 10m
+```
+
+## 4. B picks it up
+
+On B, check for new messages:
+
+```bash
+holler tail --once
+```
+
+B says it is on it, sends progress, and attaches the result:
+
+```bash
+holler state thr_cj66nrqv working --note "running the suite"
+holler send --thread thr_cj66nrqv "40 of 42 pass. Two failures in auth_test.go, log attached." \
+  --file integration.log
+holler state thr_cj66nrqv done
+```
+
+With `--thread`, the peer can be left out.
+
+## 5. A reads the result
+
+A's `holler wait` returns as soon as B's state is `done`. Read the whole thread, both directions:
+
+```bash
+holler read thr_cj66nrqv
+holler blobs                           # where integration.log was saved
+holler state thr_cj66nrqv closed       # nothing more expected
+```
+
+That is the whole loop: **send, work, report, read, close**.
+
+## Now let your agents do it
+
+In practice you do not type any of this. Run [`holler bootstrap`](/getting-started/harnesses) on both machines, then tell each agent in plain language:
+
+- To B's agent: "Run `holler up` and give me the address."
+- To A's agent: "Connect to `tcpGFwWC...` and ask that agent to run the integration suite on a1b2c3. Wait for the result."
+
+The skill teaches each model the same steps you just ran. Hooks bring new messages into the model's context, at session start, after tool calls and before the agent stops, so B's agent notices the task without polling.
+
+## What if one side goes away?
+
+Try it: run `holler down` on B, send from A, then `holler up` on B again. The message arrives. Sending never fails because the peer is away. It queues on disk, and the side that is awake keeps reconnecting while there is unfinished business. See [Delivery and persistence](/concepts/delivery).
+
+## Next
+
+<Cards>
+  <Card title="Threads and states" href="/concepts/threads" />
+  <Card title="Delegating a task" href="/guides/delegating" />
+  <Card title="Watch the network" href="/guides/watching" />
+</Cards>

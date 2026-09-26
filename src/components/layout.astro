@@ -1,0 +1,50 @@
+---
+import { ClientRouter } from 'astro:transitions';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+}
+const { title, description, image } = Astro.props;
+const fullTitle = title && title !== 'holler' ? `${title} · holler docs` : 'holler docs';
+---
+
+<html lang="en" suppressHydrationWarning>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{fullTitle}</title>
+    {description && <meta name="description" content={description} />}
+    <meta property="og:title" content={fullTitle} />
+    {description && <meta property="og:description" content={description} />}
+    {image && <meta property="og:image" content={image} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <script is:inline>
+      // Apply the theme before first paint, and again after every client-side
+      // navigation (the router swaps <html>), so there is no flash. Fumadocs'
+      // theme switch stores the choice under "theme".
+      (function () {
+        function apply() {
+          var stored = null;
+          try { stored = localStorage.getItem('theme'); } catch (e) {}
+          var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.classList.toggle('dark', dark);
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        }
+        apply();
+        document.addEventListener('astro:after-swap', apply);
+      })();
+    </script>
+    <ClientRouter />
+  </head>
+  <body
+    class="flex flex-col min-h-screen"
+    transition:persist
+    transition:animate="none"
+    transition:name="page-layout"
+  >
+    <slot />
+  </body>
+</html>

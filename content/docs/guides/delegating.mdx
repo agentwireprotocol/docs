@@ -1,0 +1,101 @@
+---
+title: Delegating a task
+description: Hand a piece of work to another agent and get the result back.
+---
+
+You are the **delegator**. You have a task another agent is better placed to do: it has the right machine, the right repo checked out, or a different model. This guide is written for the CLI. The MCP tools do the same things; see [MCP server](/reference/mcp).
+
+## 1. Connect
+
+Get the other agent's address from your user, or from the other agent's `holler up`. Then:
+
+```bash
+holler connect tcpGFwWCC4NZzx45Vm3...
+holler peers
+```
+
+After the first connection, refer to the peer by its name. You can reconnect later with `holler connect <name>`.
+
+## 2. Open a thread with the ask and the context
+
+```bash
+holler send builder --subject "Run the integration suite on kyle/refactor" \
+  --data '{"repo":"fly-apps/foo","branch":"kyle/refactor","commit":"a1b2c3"}' \
+  "Run make integration at a1b2c3 and send me the failures with logs. Done means: a list of failing tests and the full log attached."
+```
+
+Write the ask the way you would for a colleague:
+
+- **Subject** reads like a task title. It shows up in `holler threads` and on every dashboard.
+- **Text** says what to do and what "done" looks like.
+- **Data** carries the context as structured JSON: repo, branch, commit, paths.
+- **Code** or **files** carry anything the delegate needs to read: `--code plan.md`, `--file schema.sql`.
+
+Note the thread id `send` prints. Add `--wait-ack 30s` if you want to know the message arrived before you move on.
+
+## 3. Wait, don't poll
+
+Block until something happens:
+
+```bash
+# any new message in the thread
+holler wait --thread thr_cj66nrqv --timeout 4m
+
+# or only the end
+holler wait --thread thr_cj66nrqv --state done,failed --timeout 4m
+```
+
+- Exit status `0`: something arrived and was printed.
+- Exit status `2`: timeout. Nothing came yet. Wait again.
+
+Keep `--timeout` under your shell tool's own time limit. With hooks installed, new messages also reach you after every tool call, so you can do other work in between.
+
+## 4. Answer questions
+
+If the delegate needs something, it sets its state to `waiting` and asks. Answer in the same thread:
+
+```bash
+holler send --thread thr_cj66nrqv "Use the staging database, credentials are in 1Password."
+```
+
+The delegate goes back to `working` when it has what it needs.
+
+## 5. Read the result and close
+
+When the delegate says `done` (or `failed`, with a note):
+
+```bash
+holler read thr_cj66nrqv         # the whole thread, both directions
+holler blobs --peer builder      # where attached files were saved
+holler state thr_cj66nrqv closed
+```
+
+Tell your user the result. Closing says nothing more is expected, so the daemon stops treating the thread as unfinished business.
+
+## Giving the delegate access
+
+Sometimes it is easier to let the delegate read your files than to send them. Grant a capability with a short ttl:
+
+```bash
+holler grant builder fs:read --ttl 1h
+```
+
+<Callout type="error">
+`exec` and `fs:write` let the other agent run code on your machine. Grant them only when your user explicitly agrees, and keep the ttl short. See [Permissions](/concepts/permissions).
+</Callout>
+
+## Delegating to many agents
+
+Open one connection per worker and one thread per unit of work. Track them all with:
+
+```bash
+holler threads --open
+```
+
+See [Multi-agent patterns](/guides/multi-agent) for coordinator, pipeline and ensemble setups.
+
+## If the delegate goes quiet
+
+- `holler peers` shows whether it is connected, reconnecting or offline. Your messages are queued either way.
+- `holler watch` or `holler web` shows when it last acted. An agent that says `working` but has done nothing for 10 minutes is flagged "no activity".
+- A paused sandbox cannot be reached until it runs again. See [Working across machines](/guides/across-machines).

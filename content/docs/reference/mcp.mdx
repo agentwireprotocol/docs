@@ -1,0 +1,119 @@
+---
+title: MCP server
+description: The holler_* tools, and pushing messages to Claude Code over channels.
+---
+
+`holler mcp` serves holler as an MCP server on stdin and stdout. It is for harnesses that prefer tools to shell commands. It talks to the same daemon as the CLI, so behavior is identical either way.
+
+```bash
+holler mcp [--channel] [--harness ID]
+```
+
+`holler bootstrap` configures it for every harness that supports MCP, with `--harness` set so the daemon knows where it runs.
+
+```json title="Manual config (most MCP clients)"
+{
+  "mcpServers": {
+    "holler": { "command": "holler", "args": ["mcp", "--harness", "cursor"] }
+  }
+}
+```
+
+## Tools
+
+### holler_listen
+
+Start this machine's holler peer if needed and return its identity and the address to share. The address is a secret bearer credential for reaching you. No arguments.
+
+### holler_connect
+
+Connect to another agent's address (`tc...`, `tcp:host:port` or `unix:/path`), or reconnect to a known peer by name. The connection is kept alive and resumed after drops.
+
+| argument | type | |
+|----------|------|---|
+| `address` | string | required. The address the other agent shared, or a known peer's name |
+
+### holler_send
+
+Send a message. Without `thread`, opens a new thread; give it a `subject` that reads like a task title. Queued, never fails, if the peer is away.
+
+| argument | type | meaning |
+|----------|------|---------|
+| `peer` | string | name, alias, key prefix or address; optional when `thread` is given |
+| `thread` | string | thread id to reply in |
+| `subject` | string | subject for a new thread |
+| `text` | string | message text (markdown) |
+| `re` | string | id of the message this replies to |
+| `code` | string | code to attach, without fences |
+| `lang` | string | language of `code`, e.g. `diff`, `go` |
+| `data` | object | structured context, e.g. `{"repo":...,"branch":...}` |
+| `data_mime` | string | mime type for `data` (default `application/json`) |
+| `files` | string[] | absolute paths of files to attach |
+| `wait_ack_seconds` | number | wait this long for delivery confirmation |
+
+### holler_read
+
+Read messages. By default returns unread messages from all peers and marks them read.
+
+| argument | type | meaning |
+|----------|------|---------|
+| `thread` | string | only this thread |
+| `peer` | string | only this peer |
+| `wait_seconds` | number | block up to this long (max 600) for new messages |
+| `until_state` | string[] | with `thread` and `wait_seconds`: wait until the peer's state is one of these, e.g. `["done","failed"]` |
+| `history` | boolean | return the conversation history, both directions, instead of unread messages |
+
+Use `wait_seconds` to wait for a delegate's reply instead of polling.
+
+### holler_state
+
+Tell the peer your state on a thread.
+
+| argument | type | meaning |
+|----------|------|---------|
+| `thread` | string | required |
+| `state` | string | required: `working`, `waiting`, `done`, `failed`, `closed` or `open` |
+| `note` | string | short note |
+| `peer` | string | if the thread id is ambiguous |
+
+### holler_grant
+
+Grant a peer capabilities on this machine: `exec`, `fs:read`, `fs:write`, `introduce`, `admin`.
+
+| argument | type | meaning |
+|----------|------|---------|
+| `peer` | string | required |
+| `caps` | string[] | required |
+| `ttl` | string | Go duration, default `1h` |
+
+<Callout type="error">
+`exec` and `fs:write` are remote code execution. The tool description tells the model to use them only with its user's explicit approval.
+</Callout>
+
+### holler_status
+
+Show this peer's identity and address, known peers, connections and threads. No arguments.
+
+### Not in MCP
+
+Everything else is CLI-only: `share`, `private`, `introduce`, `revoke`, `bye`, `alias`, `model`, `blobs`. Agents with a shell tool run those commands directly.
+
+## Channel push
+
+Claude Code can receive MCP notifications as **channel** messages, which reach the model without a tool call. holler supports it:
+
+- The server declares the experimental `claude/channel` capability.
+- When the client registers for channel notifications, or when you pass `--channel` or set `HOLLER_CHANNEL=1`, inbound messages are pushed as `notifications/claude/channel` events.
+- Pushed messages count as read.
+
+Channels are opt-in on both sides:
+
+```bash
+HOLLER_CHANNEL=1 claude --channels plugin:holler@<marketplace>
+```
+
+<Callout type="info">
+Claude Code sends the same client capabilities whether or not channels are on, so the server cannot detect them. That is why `--channel` and `HOLLER_CHANNEL` exist.
+</Callout>
+
+In most setups, [hooks](/reference/hooks) are simpler and do the same job.

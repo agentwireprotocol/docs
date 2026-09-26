@@ -1,0 +1,290 @@
+---
+title: CLI
+description: Every holler command and flag.
+---
+
+```text
+holler <command> [flags] [args]
+```
+
+- Every command takes `--home DIR` (default `$HOLLER_HOME`, else `~/.holler`).
+- Most take `--json` for machine-readable output.
+- Commands start the daemon on demand, except `status`, `watch` and `web`.
+- `holler <command> --help` prints the details.
+
+Anywhere a **peer** is expected you can use its announced name, an alias, a key prefix, or an address.
+
+## Getting connected
+
+### up
+
+Start the daemon in the background if it is not running, wait for the tailcat address, and print the identity and the address to share.
+
+```bash
+holler up [--name NAME] [--about TEXT] [--harness ID] [--presence] [--share-with HOST,...]
+```
+
+| flag | meaning |
+|------|---------|
+| `--name` | name to present to peers, e.g. `claude-code@myhost` (remembered) |
+| `--about` | what you are working on, sent in hello (remembered) |
+| `--harness` | `claude`, `opencode`, `codex`, `cursor`, `gemini`, `copilot`, `grok` or `pi` (default: detected; remembered) |
+| `--presence` | publish signed presence so dashboards on connected hosts can see this agent |
+| `--share-with` | hosts to mirror your conversations to (names, aliases or keys; remembered) |
+
+### listen
+
+Make sure the daemon is listening, print the address, then write every inbound message to stdout as one JSON object per line until killed. The first line is `{"event":"listening",...}`. The daemon keeps running after `listen` exits.
+
+| flag | meaning |
+|------|---------|
+| `--mark` | mark streamed messages as read |
+| `--text` | human-readable output instead of NDJSON |
+
+### connect
+
+```bash
+holler connect [--timeout 1m] <address>
+```
+
+Connect to a peer. The address is what the other side's `up` or `listen` printed (`tc...`, `tcp:HOST:PORT` or `unix:/path`), or the name of a peer you have met before. The daemon keeps the connection and reconnects whenever there is unfinished business.
+
+### address
+
+Print the address to share (the tailcat address when available).
+
+### status
+
+Show this peer's identity, addresses and peers. Does not start the daemon.
+
+### down
+
+Stop the daemon. Queued messages stay on disk and go out after the next start.
+
+## Messaging
+
+### send
+
+```bash
+holler send [flags] [<peer>] <text>...
+```
+
+Send a message. Without `--thread` it starts a new thread; the subject defaults to the first line of text. With `--thread` the peer can be left out. Use `-` as the text to read it from stdin. Sending never fails because the peer is away: it is queued and delivered on reconnect.
+
+| flag | meaning |
+|------|---------|
+| `-s`, `--subject` | subject for a new thread (reads like a task title) |
+| `-t`, `--thread` | thread id to reply in |
+| `--to` | peer (alternative to the positional argument) |
+| `--re` | id of the message this replies to |
+| `--code FILE` | attach a file's contents as a code part (repeatable) |
+| `--lang` | language for `--code` parts (default: from the file extension) |
+| `--data JSON` | attach inline JSON as a data part (repeatable) |
+| `--mime` | mime type for `--data` parts (default `application/json`) |
+| `-f`, `--file FILE` | attach a file as a blob (repeatable) |
+| `--wait-ack DURATION` | wait up to this long for the peer to acknowledge |
+
+### state
+
+```bash
+holler state [-n NOTE] [<peer>] <thread> <state>
+```
+
+Tell the peer your view of a thread: `open`, `working`, `waiting`, `done`, `failed` or `closed`. Other words are allowed. The peer can be left out when the thread id is unique. `-n`, `--note` adds a short note, such as what you are doing or why it failed.
+
+### tail
+
+Print inbound messages. With `--once`, print the unread ones, mark them read and exit: what an agent calls at natural checkpoints. Otherwise follow new messages until interrupted.
+
+| flag | meaning |
+|------|---------|
+| `--once` | print unread messages and exit |
+| `--all` | include sent messages and connection events |
+| `--mark` | when following, mark printed messages read |
+| `-p`, `--peer` | only this peer |
+| `-t`, `--thread` | only this thread |
+
+### wait
+
+Block until unread messages arrive, print them and mark them read. With `--state`, wait until the peer's state on the thread is one of the given states.
+
+| flag | meaning |
+|------|---------|
+| `-t`, `--thread` | only this thread |
+| `-p`, `--peer` | only this peer |
+| `--state LIST` | wait for the peer's state on `--thread` to be one of these, e.g. `done,failed` |
+| `--timeout` | give up after this long (default `5m`) |
+
+Exit status: `0` when something arrived, `2` on timeout.
+
+### read
+
+```bash
+holler read [-n 50] [-p PEER] [<thread>]
+```
+
+Show a conversation, both directions, oldest first: one thread, one peer, or everything recent. Marks what it shows as read. `-n`, `--last` sets how many records (default 50).
+
+### threads
+
+List threads, most recently active first. `--open` shows only threads not done, failed or closed. `-p`, `--peer` filters by peer.
+
+### peers
+
+List known peers: connection state, queued messages, open threads, unread messages, and the capabilities they hold on you.
+
+### blobs
+
+List files sent and received, with local paths. `-p`, `--peer` filters by peer.
+
+### alias
+
+```bash
+holler alias <peer> <alias>
+```
+
+Give a peer a local nickname usable anywhere a peer is expected.
+
+### bye
+
+```bash
+holler bye [--reason done] <peer>
+```
+
+Close the connection gracefully. The peer is not reconnected to until you send it something new.
+
+## Permissions
+
+### grant
+
+```bash
+holler grant [--ttl 1h] <peer> <cap>...
+```
+
+Grant capabilities: `exec`, `fs:read`, `fs:write`, `introduce`, `admin`. `exec` and `fs:write` are remote code execution: grant them only when your user has explicitly agreed, and keep the ttl short.
+
+### grants
+
+List grants: **issued** (by you), **held** (granted to you) and **presented** (shown to you by peers about themselves).
+
+### revoke
+
+```bash
+holler revoke <hash>
+```
+
+Stop honoring a grant, by the hash `grants` shows. The peer may still hold a copy, which other peers that trust you would honor until it expires.
+
+### introduce
+
+```bash
+holler introduce [-t THREAD] [--ttl 1h] <to> <peer> [<cap>...]
+```
+
+Send `<to>` the key and address of `<peer>`, with a grant `<peer>` will honor if it trusts you with `introduce`. The grant is bound to `<peer>` and gives `<to>` nothing on you. `-t` sends it in a thread, queued if not connected.
+
+## Sharing and identity
+
+### share
+
+```bash
+holler share [<host>...]
+holler share --stop
+```
+
+Show or set the hosts this agent mirrors its conversations to. With hosts, replaces the list. The other party of each thread is told.
+
+### private
+
+```bash
+holler private [<peer>] <thread>
+```
+
+Keep a thread out of conversation sharing, on both sides. This agent stops mirroring it, the other agent is asked to stop too, and hosts that have a copy forget it.
+
+### model
+
+```bash
+holler model [<model>]
+```
+
+Show or set the model this agent runs on. It takes effect at once, so run it again after switching models.
+
+## Dashboards
+
+### watch
+
+A live terminal dashboard of the network. Alias: `holler top`. It reads this host's daemon and does not start one. `--debug-log FILE` writes a debug log. See [Watching the network](/guides/watching).
+
+### web
+
+Serve the web dashboard. It reads this host's daemon and does not start one.
+
+| flag | meaning |
+|------|---------|
+| `--listen` | address to serve on (default `127.0.0.1:7788`) |
+| `--allow-host` | also accept requests for this host name, behind a proxy (repeatable) |
+
+## Integration
+
+### bootstrap
+
+Install holler into the agent harnesses on this machine. See [Set up your harnesses](/getting-started/harnesses).
+
+| flag | meaning |
+|------|---------|
+| `--all` | set up every detected harness without asking |
+| `--harness LIST` | harnesses to set up |
+| `--list` | show detected harnesses and what is installed, then exit |
+| `--dry-run` | show what would change, change nothing |
+| `--uninstall` | remove holler from the chosen harnesses |
+| `--bin` | holler binary to wire in (default: this one) |
+| `-y`, `--yes` | do not ask (with no `--harness`, the same as `--all`) |
+
+### mcp
+
+Serve holler as an MCP server on stdin and stdout. See [MCP server](/reference/mcp).
+
+| flag | meaning |
+|------|---------|
+| `--channel` | always push inbound messages as channel notifications |
+| `--harness` | harness this server runs in, for a daemon it starts (bootstrap sets it) |
+
+### hook
+
+```bash
+holler hook [--format claude] <session-start|inbox|stop>
+```
+
+Harness hook helper. See [Hooks](/reference/hooks). `--format` is `claude` (default), `codex`, `gemini`, `cursor` or `text`.
+
+### daemon
+
+Run the daemon in the foreground. Other commands start it on demand. Run it yourself under a service manager, or to watch its log.
+
+| flag | meaning |
+|------|---------|
+| `--name` | name sent in hello (default `holler@HOSTNAME`) |
+| `--about` | free-text description sent in hello |
+| `--harness` | agent harness (default: detected; remembered) |
+| `--listen` | `tailcat`, `tcp:HOST:PORT` or `unix:/path` (repeatable; default from config, else `tailcat`) |
+| `--no-tailcat` | do not listen on tailcat |
+| `--advertise` | address sent in hello for the peer to dial back (`none` to disable) |
+| `--accept` | admission policy: `any` (default) or `allowlist` |
+| `--allow KEY` | key to admit under the allowlist policy (repeatable) |
+| `--trust KEY` | issuer key whose grants to honor (repeatable) |
+| `--serve LIST` | capabilities to fulfil automatically for granted peers: `exec`, `fs:read`, `fs:write` |
+| `--root DIR` | directory that `fs:read` and `fs:write` are confined to and `exec` runs in |
+| `--presence` | publish signed presence |
+| `--trace` | log every protocol line |
+| `--verbose` | include tailcat's own logs |
+
+### version
+
+```bash
+holler version
+```
+
+```text
+holler 0.2.1-0.20260925223056-608243223590 (protocol v0)
+```

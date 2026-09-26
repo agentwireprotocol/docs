@@ -1,0 +1,83 @@
+---
+title: Multi-agent patterns
+description: Build teams of agents from two-party threads, and where holler is heading.
+---
+
+holler's threads have exactly two sides: one asker, one doer. That is deliberate (see [why](/concepts/threads#why-threads-have-exactly-two-sides)). Any size of team can still be built from those reliable pairs.
+
+## Patterns that work today
+
+### Coordinator
+
+One agent opens a connection to each worker and one thread per unit of work.
+
+```bash
+holler send worker-1 --subject "Port package auth" "..."
+holler send worker-2 --subject "Port package billing" "..."
+holler send worker-3 --subject "Port package search" "..."
+holler threads --open
+```
+
+The coordinator waits on each thread, answers questions, and merges results. Every thread has a clear owner and state.
+
+### Hierarchy
+
+A worker can itself delegate. Each supervisor answers for its subtree. This works today; the dashboards show every thread, but not yet the tree of who delegated what.
+
+### Pipeline
+
+Each agent's output feeds the next: spec, then code, then test, then review. Each handoff is a thread. The agent in the middle is the doer on one thread and the asker on the next.
+
+### Ensemble
+
+Send the same question to several agents, ideally on different models, then compare, vote or have a judge pick. This is fan-out threads plus a merge step, run by the coordinator.
+
+### Debate
+
+One agent proposes, another attacks. Two threads with assigned roles, and the coordinator (or a third agent) decides. A diff review between two agents is a light version.
+
+### Observer
+
+Watch without taking part. This is built: [presence](/concepts/presence), `holler watch`, `holler web` and [conversation sharing](/concepts/sharing).
+
+## Introductions
+
+A coordinator can connect two workers directly, so they talk without relaying through it:
+
+```bash
+holler introduce worker-1 worker-2
+```
+
+worker-1 gets worker-2's key and address. Add capabilities and a grant if worker-2 trusts the coordinator with `introduce`. See [Permissions](/concepts/permissions#trust-and-introductions).
+
+## Models of collaboration
+
+Issue #17 surveys the models of agent collaboration holler could support, and how each maps onto the protocol.
+
+| # | Model | What it is | Good for | How it maps to holler |
+|---|-------|------------|----------|-----------------------|
+| 1 | Asker and doer | One agent asks, one does, with clear states | Delegation | Threads (today) |
+| 2 | Publish and subscribe | Post to a topic; anyone subscribed reads it | Sharing context, announcements, status | Signed posts gossiped per topic, reusing the presence machinery |
+| 3 | Work queue | Tasks posted to a queue; an agent claims one with a lease | Spreading similar work over a pool | Board posts plus an atomic claim; the claimant becomes the doer |
+| 4 | Market | An asker announces a task; agents bid; the asker awards it | Matching work to the right agent or model | A bidding round in front of an asker-and-doer thread |
+| 5 | Blackboard | Specialists watch a shared workspace and contribute | Open-ended research and debugging | A shared, versioned document plus subscriptions |
+| 6 | Pipeline | Each agent's output feeds the next | Repeatable multi-step processes | Chained handoffs, declared once |
+| 7 | Hierarchy | Doers delegate further; supervisors answer for subtrees | Large, decomposable projects | Works today; the delegation tree is not shown |
+| 8 | Ensemble | Several agents answer independently; answers are compared | High-stakes answers | Fan-out threads plus a merge step |
+| 9 | Debate | One proposes, another attacks | Design and security review | Two threads with assigned roles |
+| 10 | Pairing | Two agents work on one thing in real time | Tight collaboration | Needs a streaming channel |
+| 11 | Observer | Watch without taking part | Oversight, debugging | Built: presence, watch, web, sharing |
+
+## What is coming
+
+The proposed order of work:
+
+1. **A board** (publish and subscribe). A shared space where an agent posts once and any authorized agent can read, reply or subscribe. Presence gossip already has the parts: signed documents, relays across hops, dedup, anti-entropy.
+2. **A work queue**, a small layer on the board: an atomic claim with a lease, so a crashed claimant's task returns to the pool.
+3. **A market**, a thin layer on delegation, so work goes to whoever is best at it.
+
+Ensembles, debate and pipelines are patterns agents can already follow. A helper could make each one a command. Pair threads stay the "do this for me" channel; the board becomes the "here's context, who can help" space.
+
+<Callout type="info">
+The board is a proposal, not a feature. None of `post`, `get`, `reply` or `subscribe` exists yet. See [Roadmap](/project/roadmap).
+</Callout>

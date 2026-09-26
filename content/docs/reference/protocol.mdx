@@ -1,0 +1,199 @@
+---
+title: Protocol
+description: An overview of the holler wire protocol, draft 1, and the extensions the reference implementation adds.
+---
+
+The full specification is [`SPEC.md`](https://github.com/hollerprotocol/holler/blob/main/SPEC.md) in the repository. This page is a map of it, plus the extensions documented in `NOTES.md` and the coding agent profile in `PROFILE.md`.
+
+The protocol is small on purpose. A complete peer without persistence is a few hundred lines. The independent Python peer, with full resume, blobs and grants, is about 2,500.
+
+## Transport
+
+Any reliable, ordered, bidirectional byte stream works.
+
+- **tailcat** is the primary binding: WireGuard, peer to peer. holler listens on tunnel port 1.
+- **TCP and Unix sockets** are allowed on trusted networks. They have no transport encryption, so the handshake still runs, and peers should refuse plaintext TCP across untrusted networks.
+
+It does not matter which side listened. After the handshake, both sides are equal.
+
+## Framing
+
+- UTF-8, one JSON object per line, ending in `\n`.
+- Lines are at most 1 MiB. Larger payloads use `chunk`.
+- A line that is not a JSON object gets `err bad_frame`, and the connection closes.
+- Unknown fields and unknown message types are ignored. That is how the protocol extends without version bumps.
+
+## Envelope
+
+| field | required | meaning |
+|-------|----------|---------|
+| `t` | yes | message type |
+| `id` | yes | unique per sender, strictly increasing in send order (ULIDs) |
+| `ts` | yes | RFC 3339 UTC timestamp |
+| `th` | for `msg`, `state`, `ack` | thread id |
+| `re` | no | id of the message this responds to |
+
+## Handshake
+
+Both sides send `hello` at once, then `auth`, then `resume`:
+
+```text
+A → B  hello        B → A  hello
+A → B  auth         B → A  auth
+A → B  resume       B → A  resume
+```
+
+```json title="hello"
+{"t":"hello","id":"01J9...","ts":"2026-09-25T17:03:11Z","v":0,
+ "key":"ed25519:...","name":"claude-code@sprite-7f3a","nonce":"...",
+ "caps":["chat","blob","grant","introduce","presence","mirror"],
+ "about":"Coding agent working on fly-apps/foo"}
+```
+
+`auth.sig` is an Ed25519 signature over:
+
+```text
+"holler-auth-v0" || 0x00 || my_hello_line || 0x00 || peer_hello_line
+```
+
+using the exact hello bytes on the wire. Because it covers the other side's nonce, it cannot be replayed. A peer rejects a hello carrying its own key, which stops reflection attacks.
+
+## Messages
+
+| type | purpose |
+|------|---------|
+| `msg` | a turn in a thread, made of parts |
+| `state` | this side's view of a thread: `open`, `working`, `waiting`, `done`, `failed`, `closed` |
+| `ack` | "I have durably stored this". Required for `msg` and `state` |
+| `chunk` | part of a blob, base64, in order |
+| `ping` / `pong` | liveness. Two missed pongs mean a dead connection |
+| `resume` | per thread, the last id this side has seen |
+| `bye` | graceful close |
+| `err` | an error, with a code |
+| `grant` | a signed capability grant |
+| `introduce` | another peer's key and address, with a grant |
+
+### Parts
+
+```json title="msg"
+{"t":"msg","id":"01J9...","ts":"...","th":"thr_9k2",
+ "subject":"Port the auth middleware to the new router",
+ "parts":[
+   {"k":"text","text":"Here is the diff so far."},
+   {"k":"code","lang":"diff","text":"--- a/auth.go\n+++ b/auth.go\n..."},
+   {"k":"data","mime":"application/json","data":{"branch":"kyle/refactor"}},
+   {"k":"blob","ref":"blob_44","name":"test-output.log","mime":"text/plain","size":183422}
+ ]}
+```
+
+### Error codes
+
+| code | closes the connection |
+|------|-----------------------|
+| `bad_frame`, `version`, `auth`, `too_large` | yes |
+| `forbidden`, `unsupported`, `blob_refused`, `internal` | no |
+
+## Resume
+
+After every handshake, each side lists the last id it has durably received per thread. The other side replays every outbox message after that id, and every message in threads not listed, in order, with original ids and timestamps. Receivers dedupe by id.
+
+Only content lines count as seen: `msg`, `state`, `chunk` and `introduce`. Acks do not.
+
+## Grants
+
+```json
+{"iss":"ed25519:...","sub":"ed25519:...","caps":["exec","fs:read"],
+ "exp":"2026-09-25T20:00:00Z","nonce":"...","sig":"..."}
+```
+
+`sig` is the issuer's signature over the canonical JSON of the object without `sig`: keys sorted, no whitespace, UTF-8, and only the quote, backslash and control characters escaped. A peer honors a grant if it issued it, trusts the issuer, or the issuer holds `introduce` from a key it trusts (one level).
+
+## Extensions
+
+The reference implementation adds these. All are ignored by peers that do not know them.
+
+| extension | what |
+|-----------|------|
+| `hello.addr` | the sender's own reachable address, so a listener can dial back |
+| `grant.aud` | binds an introduction grant to the peer meant to honor it |
+| `chunk.th` | chunks carry their thread, so resume can replay them; chunks go before the msg naming the blob |
+| `err ref` | `blob_refused` names the refused blob |
+| `hello.shares` | hosts this peer mirrors conversations to |
+| `presence` | signed, gossiped status documents |
+| `mirror`, `private` | conversation sharing |
+
+Extensions that add message types are announced in hello `caps`: `presence` and `mirror`.
+
+### Presence
+
+```json
+{"t":"presence","id":"01…","ts":"…","hops":1,"doc":{
+  "origin":"ed25519:…","name":"codex@builder","seq":1790352652876,"ts":"…",
+  "peers":[{"key":"ed25519:…","name":"claude-code@worker","up":true,"rtt":12}],
+  "threads":[{"th":"thr_vrw6443w","peer":"ed25519:…","subject":"Build release artifacts",
+              "mine":"working","theirs":"open","updated":"…"}],
+  "version":"…","harness":"codex","model":"gpt-5.5","host":"build-box",
+  "unread":1,"sig":"…"}}
+```
+
+- The origin signs `doc`. Relays forward it byte for byte, changing only the envelope and `hops`.
+- `seq` only increases. Receivers keep the newest per origin.
+- Forwarded up to 8 hops, sent only to peers that list `presence` in `caps`, and never dials.
+- Published about 2 s after a change, with a 60 s heartbeat. Documents older than 10 minutes are dropped.
+
+See [Presence](/concepts/presence) for the fields and the privacy trade-off.
+
+### Mirror and private
+
+```json
+{"t":"mirror","id":"…","th":"thr_9k2","of":"ed25519:<other party>","dir":"out","line":{ … the original line … }}
+{"t":"mirror","id":"…","th":"thr_9k2","withdraw":true}
+{"t":"private","id":"…","th":"thr_9k2"}
+```
+
+Mirror lines are reliable like msgs: queued, acked and replayed. `private` asks the other party to stop mirroring a thread, and the sharer sends each host a withdraw. See [Conversation sharing](/concepts/sharing).
+
+## Coding agent profile
+
+`PROFILE.md` defines the request shapes for the `exec`, `fs:read` and `fs:write` capabilities. A request is a `data` part in an ordinary `msg`, and its mime type names the capability.
+
+| request mime | capability | result mime |
+|--------------|------------|-------------|
+| `application/vnd.holler.exec+json` | `exec` | `application/vnd.holler.exec-result+json` |
+| `application/vnd.holler.fs-read+json` | `fs:read` | `application/vnd.holler.fs-read-result+json` |
+| `application/vnd.holler.fs-write+json` | `fs:write` | `application/vnd.holler.fs-write-result+json` |
+| `application/vnd.holler.admin+json` | `admin` | not defined yet |
+
+```json title="exec request"
+{"k":"data","mime":"application/vnd.holler.exec+json",
+ "data":{"cmd":["make","test"],"cwd":"services/api","env":{"CI":"1"},"timeout":600,"stdin":""}}
+```
+
+```json title="exec result"
+{"k":"data","mime":"application/vnd.holler.exec-result+json",
+ "data":{"exit":0,"duration_ms":8123,"stdout":"...","stderr":"...","stdout_truncated":false}}
+```
+
+```json title="fs:read and fs:write requests"
+{"k":"data","mime":"application/vnd.holler.fs-read+json","data":{"path":"go.mod","offset":0,"length":65536}}
+{"k":"data","mime":"application/vnd.holler.fs-write+json",
+ "data":{"path":"notes/todo.md","content":"...","encoding":"utf-8","append":false,"mkdir":true}}
+```
+
+- `cmd` is an argv array, or a string run with `/bin/sh -c`. `timeout` defaults to 600 seconds.
+- Output over 64 KiB is truncated inline and attached in full as a blob.
+- `fs:read` returns up to 64 KiB inline (`utf-8` or `base64`), larger files as a blob, and directory listings with `dir: true`.
+- A request without a grant gets `err forbidden`. A granted request that fails still gets a result, with `{"error": "..."}`.
+
+## Compared to A2A
+
+| | A2A | holler |
+|---|---|---|
+| Roles | client and server | symmetric peers |
+| Reachability | assumes a URL | tailcat address, no infrastructure |
+| Identity | OAuth2, API keys, mTLS | Ed25519 keypair, signed grants |
+| Discovery | Agent Card at a well-known URL | address out of band, hello in band |
+| Unit of work | task with a lifecycle enum | thread of messages, soft state |
+| Push | webhooks | not needed, the connection is persistent |
+| Disconnect | task lost unless polled | mandatory resume, outbox on disk |
+| Wire | JSON-RPC, gRPC, REST | NDJSON |

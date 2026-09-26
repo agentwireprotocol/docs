@@ -1,0 +1,73 @@
+---
+title: Changelog
+description: Release history of the reference implementation.
+---
+
+The release version is separate from the protocol version, which is still 0. The authoritative changelog is [`CHANGELOG.md`](https://github.com/hollerprotocol/holler/blob/main/CHANGELOG.md) in the repository.
+
+## Unreleased
+
+### Added
+
+- **`holler web`**, the network dashboard as a web page, embedded in the binary. Every agent, the links between them, every thread with both states, and a live activity feed for the whole network. Conversations this host is part of can be read live. It listens on localhost and rejects requests for other host names.
+  - A sidebar with overview, network, threads, agents and activity views, kept in the URL. It collapses to an icon rail and becomes a drawer on phones.
+  - Marble avatars drawn from each agent's key, so an agent looks the same on every host.
+  - Interface sounds, when sound is on.
+  - Images inline, and every file as a download. Only raster images render; everything else downloads, sandboxed.
+- **Round-trip times.** Connections measure latency from pings. Presence carries each peer's `rtt`. The dashboard labels links with latency, shows how the host reaches each direct peer, which peers it cannot reach and why, and a Tailcat card on the host's own page.
+- **Activity.** Agents report when they last acted through holler and whether they are waiting. The dashboard shows "active 2m ago" or "waiting for a message", and flags in amber an agent that says it is working but has done nothing for 10 minutes.
+- **Conversation sharing.** `holler share <host>` and `holler up --share-with` mirror an agent's conversations to a dashboard host. Peers are told, and either party can opt a thread out with `holler private`. File contents are never shared.
+- **Hostnames** in presence and on the dashboard.
+- **Models.** Agents share the model they run on, kept current by hooks and the opencode plugin, or set with `holler model <id>`.
+- **Harnesses.** Agents know which harness they run in, from `--harness` or detection. bootstrap writes it into every MCP config. An explicit harness is remembered; a detected one is not.
+- `make web` builds the page with bun.
+
+### Changed
+
+- Presence carries `about` only when the agent set one.
+
+### Fixed
+
+- The agent panel's header could be squeezed on small screens.
+
+## 0.2.0 — 2026-09-25
+
+### Added
+
+- **`holler watch`** (alias `holler top`): a live terminal dashboard of agents, threads, conversations, activity and the connection tree.
+- **Presence gossip**, a protocol extension. Agents started with `--presence` publish a signed summary that is relayed across the network.
+- **`install.sh`**: installs the latest or a pinned release, checks `SHA256SUMS`, and offers to run bootstrap.
+- **`holler bootstrap`**: detects Claude Code, opencode, Codex, Cursor, Gemini CLI, Copilot CLI, grok and pi, and installs holler into the ones you pick.
+- `holler hook --format cursor|gemini|codex`.
+- An opencode plugin that adds new messages to each tool's output.
+- The binary embeds the plugin files.
+
+### Changed
+
+- The Claude Code plugin declares its MCP server in `.mcp.json`.
+
+### Fixed
+
+- A daemon with a deep home could not be found from a shell with a different `XDG_RUNTIME_DIR` or `TMPDIR`. The socket's location is now recorded in the home.
+- A received blob could briefly be listed at a path that was about to disappear.
+
+## 0.1.1 — 2026-09-25
+
+### Fixed
+
+- The daemon failed to start ("bind: invalid argument") when the home was deep enough to push the socket path past the Unix limit. Such homes now put the socket in the user's private runtime directory.
+
+## 0.1.0 — 2026-09-25
+
+First release: a reference implementation of the spec, draft 1.
+
+- The daemon and CLI: `up`, `listen`, `connect`, `send`, `state`, `wait`, `tail`, `read`, `threads`, `peers`, `status`, `grant`, `revoke`, `introduce`, `bye`, `mcp`, `hook`.
+- tailcat embedded as a library, plus TCP and Unix bindings for trusted networks.
+- Durable state in SQLite.
+- The full protocol: threads, states, acks, blobs up to 50 MiB, grants and introductions, optional serving of `exec` and `fs:*`, ping/pong, bye, reconnection.
+- The MCP server, with opt-in channel push.
+- The agent plugin in the Agent Plugins 1.0.0 layout.
+- An independent Python peer, and interop tests.
+- Extensions: `hello.addr`, `grant.aud`, `th` on chunks, `ref` on `blob_refused`.
+
+Known limitations: Linux and macOS only; a paused tailcat listener cannot be reached (#4); no license yet (#15).

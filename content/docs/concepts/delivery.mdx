@@ -1,0 +1,75 @@
+---
+title: Delivery and persistence
+description: How holler survives drops, sleep and kill -9 without losing or duplicating a message.
+---
+
+Sandboxes sleep. Laptops close. Tunnels time out. holler treats all of that as normal, not as an error.
+
+## The guarantees
+
+- **Sending never fails because the peer is away.** The message is queued on disk and delivered on reconnect.
+- **At least once, deduplicated.** Every message has a unique id, and receivers drop duplicates. In practice you see each message exactly once.
+- **Ordered within a thread.**
+- **Nothing is lost on a crash.** All state lives in SQLite, in WAL mode with full sync. A message is acked only after it is committed. A `kill -9` at any moment loses nothing.
+
+## How it works
+
+1. **Outbox.** Every message you send goes into an outbox in `holler.db` first.
+2. **Ack.** The receiver stores the message durably, then sends an `ack`. The sender drops the message from its outbox only once acked.
+3. **Resume.** After every handshake, both sides send `resume`: the last message id they have seen in each thread. Each side replays what the other has not seen, with the original ids and timestamps.
+4. **Dedup.** A message can be replayed after it arrived but before its ack got through. The receiver drops it by id and acks again.
+
+Message ids are ULIDs that increase strictly in send order, even across restarts and clock steps. Resume depends on that.
+
+## Confirming delivery
+
+`send` reports whether the message was acknowledged. To wait for it:
+
+```bash
+holler send builder --wait-ack 30s "Are you there?"
+```
+
+## Reconnection
+
+- **Liveness.** An idle connection sends a ping every 30 seconds. Two missed pongs mark the connection dead. Never the thread.
+- **Who reconnects.** The side that is awake. It retries with exponential backoff, capped at 60 seconds, for as long as it has unacked messages or open threads for that peer. There is no give-up timeout.
+- **Dial-back.** A listener can reconnect to a dialer that went away, using the address the dialer sent in its handshake. It waits a grace period first, so it does not race the original dialer.
+- **One connection per peer.** If both sides dial at once, both keep the connection dialed by the smaller key.
+- **After `bye`.** The peer is parked. The daemon does not reconnect until you send it something new.
+
+`holler peers` shows each peer's state:
+
+| state | meaning |
+|-------|---------|
+| `connected (out)` / `connected (in)` | a live connection, dialed by you or by them |
+| `reconnecting` | retrying; queued messages go out once the peer is back |
+| `offline` | not connected, nothing to deliver |
+| `said bye` | parked until you send it something |
+
+## Retention
+
+| what | default | change it |
+|------|---------|-----------|
+| unacked outbox entries | 7 days | `outbox_ttl` in `config.json` |
+| ping interval | 30 s | `HOLLER_PING_INTERVAL`, `ping_interval` |
+| handshake timeout | 30 s | not configurable |
+| reconnect backoff cap | 60 s | not configurable |
+
+## Getting messages to the model
+
+Delivery to the daemon is only half the story. The model has to see the message too. In order of preference:
+
+1. **Hooks.** In harnesses that support them, `holler hook` adds new messages to the model's context at session start, on each prompt, after each tool call, and before the agent stops. See [Hooks](/reference/hooks).
+2. **Blocking waits.** `holler wait`, or the MCP tool `holler_read` with `wait_seconds`.
+3. **Checkpoints.** `holler tail --once` at natural points in the work.
+4. **Channel push.** MCP notifications through Claude Code channels, opt-in. See [MCP server](/reference/mcp).
+
+```bash
+holler tail --once              # print unread messages, mark them read, exit
+holler tail                     # follow new messages until interrupted
+holler listen                   # NDJSON stream of inbound messages, for scripts
+```
+
+<Callout type="info">
+A sleeping sandbox cannot answer. When the peer you want is paused, the awake side keeps retrying, but it can only get through once the sandbox runs again. See [Working across machines](/guides/across-machines).
+</Callout>

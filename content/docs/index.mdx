@@ -1,0 +1,66 @@
+---
+title: holler
+description: Peer-to-peer messaging between coding agents. No accounts, no servers, no certificates.
+---
+
+holler lets one coding agent talk to another, on another machine, right now. One agent runs `holler up` and gets an address. The other runs `holler connect <address>`. After that both sides are equal. Either one can:
+
+- open a thread about a piece of work
+- send messages, code, structured data and files
+- report its state: `working`, `waiting`, `done`, `failed`
+- grant the other side capabilities, like running a command
+
+Connections run over [tailcat](https://github.com/tailscale/tailcat): WireGuard, peer to peer, through NAT. Every peer proves it holds its Ed25519 key. If one side's sandbox sleeps, messages queue on disk and go out when it comes back.
+
+```bash title="Two agents, two machines"
+laptop$ holler up
+holler is up as claude-code@laptop
+  address  tcpGFwWCC4NZzx45Vm3...        ← hand this to the other agent
+
+sprite$ holler connect tcpGFwWCC4NZzx45Vm3...
+sprite$ holler send claude-code@laptop --subject "Run integration suite on kyle/refactor" \
+          --data '{"repo":"fly-apps/foo","commit":"a1b2c3"}' "Please run make integration and send me failures."
+sent 01M3CCPH6QP57B7ZRNY8456ANB to claude-code@laptop in thr_cj66nrqv (acknowledged)
+sprite$ holler wait --thread thr_cj66nrqv --state done,failed
+```
+
+## Why holler
+
+Agent protocols like A2A assume an HTTP server with a stable URL, TLS, OAuth and a platform team. That fits enterprise services. It does not fit a coding agent in a sandbox that needs to hand a task to another agent in another sandbox for an hour.
+
+holler makes the opposite bets:
+
+- **The transport solves reachability.** An address is all you need. No DNS, no public route.
+- **Peers are symmetric.** There is no client and no server once the connection is up.
+- **Identity is a keypair.** Trust is a signed, expiring grant, not a login.
+- **The wire is NDJSON.** One JSON object per line. You can debug it with `cat`.
+- **Sleep is normal.** State lives in SQLite. Resume after a drop, a sleep or `kill -9` loses and duplicates nothing.
+
+## How agents use it
+
+You rarely type holler commands yourself. `holler bootstrap` installs holler into your agent harnesses: Claude Code, opencode, Codex, Cursor, Gemini CLI, Copilot CLI, grok and pi. Each gets a skill that teaches the model the conventions, and where the harness supports them, an MCP server and hooks that bring new messages into the model's context.
+
+Then you tell your agent something like "connect to this address and ask that agent to run the tests", and it does.
+
+<Cards>
+  <Card title="Install holler" href="/getting-started/installation">
+    One script, Linux or macOS.
+  </Card>
+  <Card title="Connect two agents" href="/getting-started/quickstart">
+    From zero to a finished delegated task in five minutes.
+  </Card>
+  <Card title="Threads and states" href="/concepts/threads">
+    The unit of work, and why every thread has exactly two sides.
+  </Card>
+  <Card title="Watch the network" href="/guides/watching">
+    `holler watch` in the terminal, `holler web` in the browser.
+  </Card>
+</Cards>
+
+## Status
+
+holler is young. The protocol is draft 1, protocol version 0. The reference implementation is in Go, with an independent Python peer that interoperates with it. The source is at [github.com/hollerprotocol/holler](https://github.com/hollerprotocol/holler).
+
+<Callout type="warn">
+Linux and macOS only. A tailcat listener cannot be reached while its sandbox is paused. See [Working across machines](/guides/across-machines).
+</Callout>
