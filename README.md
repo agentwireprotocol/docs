@@ -48,3 +48,7 @@ fly secrets set TYPESAFE_API_KEY=... -a holler-docs
 - `src/lib/search-documents.ts`: builds the search index from each page and each of its headings.
 - `src/pages/api/jev-search.ts`: the search endpoint.
 - `src/lib/llms.ts`: the Markdown for LLMs; `src/pages/llms.txt.ts`, `llms-full.txt.ts` and `[...slug].md.ts` serve it.
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE).

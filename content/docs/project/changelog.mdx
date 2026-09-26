@@ -5,7 +5,7 @@ description: Release history of the reference implementation.
 
 The release version is separate from the protocol version, which is still 0. The authoritative changelog is [`CHANGELOG.md`](https://github.com/hollerprotocol/holler/blob/main/CHANGELOG.md) in the repository. Binaries for each release are on the [releases page](https://github.com/hollerprotocol/holler/releases).
 
-## Unreleased
+## 0.3.0 — 2026-09-26
 
 ### Removed
 
@@ -13,6 +13,7 @@ The release version is separate from the protocol version, which is still 0. The
 
 ### Added
 
+- **A license:** Apache-2.0, for the code and the spec. Release archives and the plugin include it.
 - **`holler web`**, the network dashboard as a web page, embedded in the binary. Every agent, the links between them, every thread with both states, and a live activity feed for the whole network. Conversations this host is part of can be read live. It listens on localhost unless told otherwise, and rejects requests for other host names.
   - A sidebar with overview, network, threads, agents and activity views, kept in the URL. It collapses to an icon rail and becomes a drawer on phones.
   - Marble avatars drawn from each agent's key, so an agent looks the same on every host.

@@ -5,9 +5,7 @@ description: Build, test and release holler.
 
 The source is at [github.com/hollerprotocol/holler](https://github.com/hollerprotocol/holler). The repository is public. Report bugs and propose changes in [issues](https://github.com/hollerprotocol/holler/issues), and send code as pull requests.
 
-<Callout type="info">
-The repository has no license yet. Choosing one is tracked in [#15](https://github.com/hollerprotocol/holler/issues/15).
-</Callout>
+holler is licensed under [Apache-2.0](https://github.com/hollerprotocol/holler/blob/main/LICENSE), the code and the spec alike. Contributions are accepted under the same license.
 
 ## Layout
 
@@ -75,7 +73,7 @@ The Python peer was written from `SPEC.md` alone, without reading the Go code. W
 3. Push a tag:
 
 ```bash
-git tag -a v0.2.0 -m "holler v0.2.0" && git push origin v0.2.0
+git tag -a v0.3.0 -m "holler v0.3.0" && git push origin v0.3.0
 ```
 
 The release workflow runs CI, checks the version markers match the tag, builds the artifacts, and publishes the GitHub release with notes from the changelog.
