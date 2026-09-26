@@ -12,16 +12,18 @@ cp .env.example .env    # add your TypeSafe API key
 bun run dev             # http://localhost:4321
 ```
 
-If `TYPESAFE_API_KEY` is not set, search still works with keyword ranking only.
+If `TYPESAFE_API_KEY` is not set, search still works with keyword ranking only: the server logs a warning, and the search dialog's footer says "keyword ranking only" (hover it for the reason).
 
 ## Build and run
 
 ```sh
 bun run build
-TYPESAFE_API_KEY=… HOST=0.0.0.0 PORT=8080 node dist/server/entry.mjs
+HOST=0.0.0.0 PORT=8080 bun run start
 ```
 
-Never commit the key. `.env` and `.env.*` are ignored; set the key in the host's environment or secrets.
+`bun run start` reads `.env` if there is one. Otherwise set `TYPESAFE_API_KEY` in the host's environment or secrets. The key is read when the server runs and is never written into the build.
+
+Never commit the key. `.env` and `.env.*` are ignored.
 
 ## Layout
 
