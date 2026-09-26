@@ -1,6 +1,7 @@
 # The docs: pages prerendered at build time, served by Astro's standalone Node
 # server, which also answers /api/jev-search (it needs TYPESAFE_API_KEY, a
-# Fly secret, at runtime; the build never sees it).
+# Fly secret, at runtime; the build never sees it). server.mjs puts content
+# negotiation in front: agents asking for text/markdown get the page's Markdown.
 FROM node:24-slim AS build
 WORKDIR /app
 RUN npm install -g bun
@@ -17,9 +18,9 @@ RUN bun install --frozen-lockfile --production
 
 FROM node:24-slim
 WORKDIR /app
-ENV NODE_ENV=production HOST=0.0.0.0 PORT=8080
-COPY package.json ./
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=8080 ASTRO_NODE_AUTOSTART=disabled
+COPY package.json server.mjs negotiate.mjs ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 EXPOSE 8080
-CMD ["node", "dist/server/entry.mjs"]
+CMD ["node", "server.mjs"]

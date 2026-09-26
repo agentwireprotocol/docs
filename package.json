@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "start": "node --env-file-if-exists=.env dist/server/entry.mjs",
+    "start": "ASTRO_NODE_AUTOSTART=disabled node --env-file-if-exists=.env server.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },

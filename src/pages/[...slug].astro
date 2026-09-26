@@ -8,6 +8,7 @@ import { pageTree, source } from "@/lib/source";
 import { getPageImageUrl } from "@/lib/shared";
 import Layout from "@/components/layout.astro";
 import type { TOCItemType } from "fumadocs-core/toc";
+import { githubUrl, markdownUrl } from "@/lib/llms";
 
 interface Props {
   page: CollectionEntry<"docs">;
@@ -40,20 +41,15 @@ const toc: TOCItemType[] = headings.map((heading) => ({
     pathname={Astro.url.pathname}
     params={Astro.params}
     page={{ toc }}
+    header={{
+      title: page.data.title,
+      description: page.data.description,
+      hero: isHome,
+      markdownUrl: markdownUrl(docsPage),
+      githubUrl: githubUrl(docsPage),
+    }}
     client:load
   >
-    {isHome ? (
-      <header class="holler-hero not-prose">
-        <span class="orb" aria-hidden="true" />
-        <h1 class="holler-title">{page.data.title}</h1>
-        {page.data.description && <p class="holler-lede">{page.data.description}</p>}
-      </header>
-    ) : (
-      <header class="not-prose mb-8">
-        <h1 class="holler-title">{page.data.title}</h1>
-        {page.data.description && <p class="holler-lede">{page.data.description}</p>}
-      </header>
-    )}
     <div class="prose flex-1">
       <Content components={{ ...defaultMdxComponents, pre: CodeBlockPre }} />
     </div>

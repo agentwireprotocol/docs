@@ -7,6 +7,7 @@ import { RootProvider } from 'fumadocs-ui/provider/astro';
 import type { AstroProviderProps } from 'fumadocs-core/framework/astro';
 import SearchDialog from './search';
 import { Logo } from './logo';
+import { PageHeader, type PageHeaderProps } from './page-header';
 
 export const repoUrl = 'https://github.com/hollerprotocol/holler';
 
@@ -16,12 +17,14 @@ export function Docs({
   pathname,
   params,
   page,
+  header,
 }: {
   tree: Root;
   children: ReactNode;
   pathname: string;
   params: AstroProviderProps['params'];
   page?: DocsPageProps;
+  header: PageHeaderProps;
 }) {
   return (
     <RootProvider pathname={pathname} params={params} navigate={navigate} search={{ SearchDialog }}>
@@ -34,7 +37,10 @@ export function Docs({
           { text: 'Spec', url: `${repoUrl}/blob/main/SPEC.md`, external: true },
         ]}
       >
-        <DocsPage {...page}>{children}</DocsPage>
+        <DocsPage {...page}>
+          <PageHeader {...header} />
+          {children}
+        </DocsPage>
       </DocsLayout>
     </RootProvider>
   );

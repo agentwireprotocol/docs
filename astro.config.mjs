@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import mdx from '@astrojs/mdx';
 import node from '@astrojs/node';
 import compression from 'compression';
+import { negotiate } from './negotiate.mjs';
 import { unified } from '@astrojs/markdown-remark';
 import {
   rehypeCode,
@@ -38,7 +39,20 @@ function compressDev() {
   };
 }
 
+// Serve a page's Markdown to requests that prefer it, as server.mjs does in
+// production.
+function negotiateDev() {
+  return {
+    name: 'holler-docs:negotiate-dev',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(negotiate);
+    },
+  };
+}
+
 export default defineConfig({
+  site: 'https://holler-docs.fly.dev',
   // Pages are prerendered; only /api/jev-search runs on the server, since it
   // holds the TypeSafe key.
   adapter: node({ mode: 'standalone' }),
@@ -65,7 +79,7 @@ export default defineConfig({
     }),
   ],
   vite: {
-    plugins: [tailwindcss(), compressDev()],
+    plugins: [tailwindcss(), compressDev(), negotiateDev()],
     server: {
       // Transform the page and its island up front, so the first load after
       // the dev server starts does not wait on them.
