@@ -8,6 +8,7 @@ interface Props {
 }
 const { title, description, image } = Astro.props;
 const fullTitle = title && title !== 'holler' ? `${title} · holler docs` : 'holler docs';
+const imageUrl = image ? new URL(image, Astro.site ?? Astro.url).href : undefined;
 ---
 
 <html lang="en" suppressHydrationWarning>
@@ -19,8 +20,13 @@ const fullTitle = title && title !== 'holler' ? `${title} · holler docs` : 'hol
     {description && <meta name="description" content={description} />}
     <meta property="og:title" content={fullTitle} />
     {description && <meta property="og:description" content={description} />}
-    {image && <meta property="og:image" content={image} />}
+    {imageUrl && <meta property="og:image" content={imageUrl} />}
+    {imageUrl && <meta property="og:image:width" content="1200" />}
+    {imageUrl && <meta property="og:image:height" content="630" />}
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    {description && <meta name="twitter:description" content={description} />}
+    {imageUrl && <meta name="twitter:image" content={imageUrl} />}
     <script is:inline>
       // Apply the theme before first paint, and again after every client-side
       // navigation (the router swaps <html>), so there is no flash. Fumadocs'

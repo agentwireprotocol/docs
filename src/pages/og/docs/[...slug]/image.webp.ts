@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
-import { generateOGImage } from 'fumadocs-ui/og/takumi';
 import { source } from '@/lib/source';
+import { docsCard, sectionTitle } from '@/og/card';
 
 export function getStaticPaths() {
   return source.getPages().map((page) => ({
@@ -16,12 +16,9 @@ export const GET: APIRoute = ({ params }) => {
 
   if (!page) return new Response(undefined, { status: 404 });
 
-  return generateOGImage({
-    title: page.data.title,
+  return docsCard({
+    title: slugs.length === 0 ? 'Documentation' : page.data.title,
     description: page.data.description,
-    site: 'holler docs',
-    primaryColor: 'rgba(50,194,185,0.35)',
-    primaryTextColor: '#32c2b9',
-    format: 'webp',
+    section: slugs.length > 1 ? sectionTitle(slugs[0]) : undefined,
   });
 };
