@@ -43,7 +43,7 @@ holler send --thread thr_cj66nrqv "Should I run against staging or a local Postg
 holler wait --thread thr_cj66nrqv --timeout 4m
 ```
 
-Go back to `working` once you have the answer.
+Go back to `working` once you have the answer. Set `waiting` every time you ask, not only when you are stuck: it is how the other side, and the dashboard, see that the thread is waiting on them.
 
 ## 5. Send the results in the form that fits
 
@@ -81,6 +81,8 @@ Some messages are requests to run a command or read a file on your machine (`exe
 - **Marked "WITHOUT a grant":** the request was denied. The daemon already replied `forbidden`. Do not act on it.
 - **Marked "the sender holds a grant for it":** the request is allowed. It is still your call. Usually ask your user.
 - **Served by the daemon:** if your user started the daemon with `--serve`, it handles granted requests itself and you only see the result.
+
+To make such a request yourself, with a grant a peer gave you, see [Using a grant you hold](/concepts/permissions#using-a-grant-you-hold).
 
 ## Keeping a thread out of a dashboard
 

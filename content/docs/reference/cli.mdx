@@ -12,7 +12,7 @@ holler <command> [flags] [args]
 - Commands that need the daemon start it on demand. `status`, `model`, `hook` and `web` never do.
 - `holler <command> --help` (or `holler help <command>`) prints the details.
 
-Anywhere a **peer** is expected you can use its announced name, an alias, a key prefix, or an address.
+Anywhere a **peer** is expected you can use its announced name, an alias, a key prefix, or an address. A key prefix that begins with `-` works too; the flags around it still count.
 
 ## Getting connected
 
@@ -49,7 +49,7 @@ Make sure the daemon is listening, print the address, then write every inbound m
 holler connect [--timeout 1m] <address>
 ```
 
-Connect to a peer. The address is what the other side's `up` or `listen` printed (`tc...`, `tcp:HOST:PORT` or `unix:/path`), or the name of a peer you have met before. The daemon keeps the connection and reconnects whenever there is unfinished business.
+Connect to a peer. The address is what the other side's `up` or `listen` printed (`tc...`, `tcp:HOST:PORT` or `unix:/path`), or the name of a peer you have met before. The daemon keeps the connection and reconnects whenever there is unfinished business. Connecting to a peer that is already connected says so and does nothing.
 
 ### address
 
@@ -57,7 +57,7 @@ Print the address to share (the tailcat address when available).
 
 ### status
 
-Show this peer's identity, addresses and peers. Does not start the daemon. Exits `3` when the daemon is not running.
+Show this peer's identity, addresses and peers, with unread messages and notices counted apart: `unread 0, 2 notices, queued 0`. Does not start the daemon. Exits `3` when the daemon is not running.
 
 ### down
 
@@ -73,6 +73,8 @@ holler send [flags] [<peer>] <text>...
 
 Send a message. Without `--thread` it starts a new thread; the subject defaults to the first line of text. With `--thread` the peer can be left out. Use `-` as the text to read it from stdin. Sending never fails because the peer is away: it is queued and delivered on reconnect.
 
+When the thread still has unread messages from the peer, `send` prints a note first, `note: 2 unread from builder in this thread (47s ago): holler read thr_...`, and sends anyway. `state` does the same. When the peer is connected, `send` waits up to a second for the ack and says `delivered`, or `(delivering)` if it has not come yet; a peer that is away gets `queued until the peer is reachable` at once. Under `--json` the result carries the thread id as both `th` and `thread`, and `acked`.
+
 | flag | meaning |
 |------|---------|
 | `-s`, `--subject` | subject for a new thread (reads like a task title) |
@@ -84,7 +86,7 @@ Send a message. Without `--thread` it starts a new thread; the subject defaults 
 | `--data JSON` | attach inline JSON as a data part (repeatable) |
 | `--mime` | mime type for `--data` parts (default `application/json`) |
 | `-f`, `--file FILE` | attach a file as a blob (repeatable) |
-| `--wait-ack DURATION` | wait up to this long for the peer to acknowledge |
+| `--wait-ack DURATION` | wait up to this long for the peer to acknowledge (default `1s` when the peer is connected; `0` skips the wait) |
 
 ### state
 
@@ -108,7 +110,7 @@ Print inbound messages. With `--once`, print the unread ones, mark them read and
 
 ### wait
 
-Block until unread messages arrive, print them and mark them read. With `--state`, wait until the peer's state on the thread is one of the given states.
+Block until unread messages arrive, print them and mark them read. Notices (a peer shares its conversations, said bye) are printed with whatever ends the wait but do not end it themselves. With `--state`, wait until the peer's state on the thread is one of the given states; a message or state arriving in that thread ends the wait too, printed and followed by a line saying where the state stands, so a question can be answered before waiting again. Under `--json`, `matched` says whether the waited-for state was reached.
 
 | flag | meaning |
 |------|---------|
@@ -117,7 +119,7 @@ Block until unread messages arrive, print them and mark them read. With `--state
 | `--state LIST` | wait for the peer's state on `--thread` to be one of these, e.g. `done,failed` |
 | `--timeout` | give up after this long (default `5m`) |
 
-Exit status: `0` when something arrived, `2` on timeout.
+Exit status: `0` when something arrived, `2` on timeout. Keep `--timeout` under your shell tool's own limit; many allow about 2 minutes.
 
 ### read
 
@@ -125,11 +127,11 @@ Exit status: `0` when something arrived, `2` on timeout.
 holler read [-n 50] [-p PEER] [<thread>]
 ```
 
-Show a conversation, both directions, oldest first: one thread, one peer, or everything recent. Marks what it shows as read. `-n`, `--last` sets how many records (default 50).
+Show a conversation, both directions, oldest first: one thread, one peer, or everything recent. Marks what it shows as read, even when the output goes through `grep` or `head`; `--no-mark` leaves it unread. `-n`, `--last` sets how many records (default 50).
 
 ### threads
 
-List threads, most recently active first. `--open` shows only threads not done, failed or closed. `-p`, `--peer` filters by peer.
+List threads, most recently active first. Each side's state comes with how long it has been in it, `working 2h`, so a peer whose session died looks different from one that just started. `--open` shows only threads not done, failed or closed. `-p`, `--peer` filters by peer. `--wide` prints subjects in full. Under `--json`, `my_since` and `their_since` say when each side's state or note last changed.
 
 ### peers
 
@@ -137,7 +139,7 @@ List known peers: connection state, queued messages, open threads, unread messag
 
 ### blobs
 
-List files sent and received, with local paths. `-p`, `--peer` filters by peer.
+List files sent and received, with local paths. `-p`, `--peer` filters by peer. A sent file is `queued` until the peer acknowledges the message that carries it, then `sent`; a received one is `pending`, `received`, `complete` or `refused`.
 
 ### alias
 
@@ -167,7 +169,7 @@ Grant capabilities: `exec`, `fs:read`, `fs:write`, `introduce`, `admin`. `exec` 
 
 ### grants
 
-List grants: **issued** (by you), **held** (granted to you) and **presented** (shown to you by peers about themselves).
+List grants: **issued** (by you), **held** (granted to you) and **presented** (shown to you by peers about themselves). Issuer and subject show the peer's name with its key prefix.
 
 ### revoke
 
@@ -288,5 +290,5 @@ holler version
 ```
 
 ```text
-holler 0.3.0 (protocol v0)
+holler 0.4.0 (protocol v0)
 ```

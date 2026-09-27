@@ -97,6 +97,26 @@ holler daemon --serve exec,fs:read,fs:write --root ~/src/foo
 
 The request and result shapes are in the [coding agent profile](/reference/protocol#coding-agent-profile).
 
+### Using a grant you hold
+
+A grant is used by sending the request yourself, in any thread with the peer that gave it: a data part with the capability's mime type. Paths are relative to the root the peer serves.
+
+```bash
+# read a file
+holler send builder --mime application/vnd.holler.fs-read+json \
+  --data '{"path":"logs/daemon.log","offset":0,"length":65536}' "reading your daemon log"
+
+# run a command
+holler send builder --mime application/vnd.holler.exec+json \
+  --data '{"cmd":["make","test"],"timeout":600}' "running the tests"
+
+# write a file
+holler send builder --mime application/vnd.holler.fs-write+json \
+  --data '{"path":"notes/todo.md","content":"...","mkdir":true}' "updating the notes"
+```
+
+The reply comes in the same thread: a result part, or `err forbidden` when the grant does not cover the request, because it expired or because the introduction that carried it did not include that capability. Wait for it with `holler wait --thread thr_...`.
+
 ## Trust and introductions
 
 You can tell your daemon to honor grants issued by another key:

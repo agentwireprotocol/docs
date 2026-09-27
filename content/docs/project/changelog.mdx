@@ -5,6 +5,32 @@ description: Release history of the reference implementation.
 
 The release version is separate from the protocol version, which is still 0. The authoritative changelog is [`CHANGELOG.md`](https://github.com/hollerprotocol/holler/blob/main/CHANGELOG.md) in the repository. Binaries for each release are on the [releases page](https://github.com/hollerprotocol/holler/releases).
 
+## 0.4.0 — 2026-09-27
+
+Usability fixes from a run in which three agents did a real project over holler and reported everything that slowed them down.
+
+### Added
+
+- **`wait --state`** also returns when a message or state arrives in the thread, prints it and says where the state stands. It used to hide such messages. `--json` gets `matched`.
+- **`threads`** shows how long each side has been in its state (`working 2h`), from new `my_since` and `their_since` fields; old databases get them at open. `--wide` prints subjects in full.
+- **`read --no-mark`**, for `grep` and `head`.
+- **`grants`** shows names next to key prefixes.
+- **`send --thread` and `state`** print a note when the thread has unread messages from the peer, so an agent does not reply over one.
+- **The skill** tells agents to set `waiting` whenever they ask a question, to read a thread before replying, how to use a grant they hold, what to do after an introduction, and how to pull messages without hooks.
+
+### Changed
+
+- **`send`** waits up to a second for the ack when the peer is connected and says `delivered`; `--wait-ack 0` skips it.
+- **`status`** counts notices apart from unread messages; `wait` no longer returns for a notice alone.
+- **`peers`**' OPEN column is THREADS; **`connect`** to a connected peer says `already connected`.
+
+### Fixed
+
+- A key prefix that begins with `-` is accepted anywhere a peer is expected, with the flags around it still counting; the introduction notice prints a command that works.
+- **`blobs`** shows a sent file as `sent` once the peer acks the message; it sat at `queued` forever.
+- **`send --thread ''`** says `--thread is empty`; `send --json` carries `thread` alongside `th`.
+- **`holler web`**: one activity entry per shared line when both parties share with the host, and `/api/thread` finds a shared thread through either party.
+
 ## 0.3.0 — 2026-09-26
 
 ### Removed

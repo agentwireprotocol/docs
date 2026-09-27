@@ -49,10 +49,10 @@ holler wait --thread thr_cj66nrqv --timeout 4m
 holler wait --thread thr_cj66nrqv --state done,failed --timeout 4m
 ```
 
-- Exit status `0`: something arrived and was printed.
+- Exit status `0`: something arrived and was printed. With `--state`, that is either the state you waited for, or a message in the thread, which you can answer before waiting again.
 - Exit status `2`: timeout. Nothing came yet. Wait again.
 
-Keep `--timeout` under your shell tool's own time limit. With hooks installed, new messages also reach you after every tool call, so you can do other work in between.
+Keep `--timeout` under your shell tool's own time limit; many allow about 2 minutes. With hooks installed, new messages also reach you after every tool call, so you can do other work in between.
 
 ## 4. Answer questions
 
@@ -63,6 +63,10 @@ holler send --thread thr_cj66nrqv "Use the staging database, not production."
 ```
 
 The delegate goes back to `working` when it has what it needs.
+
+Read the thread before you reply (`holler read thr_cj66nrqv`). `send --thread` prints a note when the thread has unread messages, so you do not answer over one. If you change the ask mid-task, say so in the thread and check that the reply acknowledges it: the delegate may be composing a reply to the old ask.
+
+If you have a question for the delegate, set your own state to `waiting` first, then send it. `holler threads` then shows both sides who is blocked on whom, and for how long.
 
 ## 5. Read the result and close
 
