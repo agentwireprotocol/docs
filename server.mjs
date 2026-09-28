@@ -12,8 +12,8 @@ const domain = 'docs.agentwireprotocol.com';
 
 http
   .createServer((req, res) => {
-    // The old host sends visitors to the domain.
-    if (req.headers.host === 'holler-docs.fly.dev') {
+    // The fly.dev host sends visitors to the domain.
+    if (req.headers.host === 'awp-docs.fly.dev') {
       res.writeHead(301, { Location: `https://${domain}${req.url ?? '/'}` });
       res.end();
       return;

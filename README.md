@@ -35,10 +35,10 @@ Never commit the key. `.env` and `.env.*` are ignored.
 
 ## Deploy
 
-Every push to `main` deploys to Fly (app `holler-docs`, the name it was created under; it serves docs.agentwireprotocol.com) through `.github/workflows/deploy.yml`, which needs the `FLY_API_TOKEN` repository secret. The Dockerfile builds the site with Node and runs `server.mjs` (Astro's handler behind content negotiation) on port 8080. Set the search key as a Fly secret:
+Every push to `main` deploys to Fly (app `awp-docs` in the agentwireprotocol org) through `.github/workflows/deploy.yml`, which needs the `FLY_API_TOKEN` repository secret. The Dockerfile builds the site with Node and runs `server.mjs` (Astro's handler behind content negotiation) on port 8080. Set the search key as a Fly secret:
 
 ```sh
-fly secrets set TYPESAFE_API_KEY=... -a holler-docs
+fly secrets set TYPESAFE_API_KEY=... -a awp-docs
 ```
 
 ## Layout
