@@ -1,4 +1,4 @@
-// The docs' social cards, drawn to match awp.fly.dev's: the hero's waves
+// The docs' social cards, drawn to match the landing page's: the hero's waves
 // and dots (src/og/background.png, from the landing page's scripts/og.py,
 // run with --background), the wordmark with the protocol's name as its
 // tagline, and the page's section, title and description in Inter. Rendered by Takumi at build time.
@@ -50,7 +50,7 @@ export function docsCard({ title, description, section }: { title: string; descr
             />
             <div style={{ marginLeft: 12, fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em' }}>Agent Wire Protocol</div>
           </div>
-          <div style={{ fontSize: 20, fontWeight: 500, color: INK3 }}>holler-docs.fly.dev</div>
+          <div style={{ fontSize: 20, fontWeight: 500, color: INK3 }}>docs.agentwireprotocol.com</div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', marginTop: 96 }}>

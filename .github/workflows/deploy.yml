@@ -1,5 +1,5 @@
-# Deploy the docs to Fly (app holler-docs, until the domain moves) on every push to main.
-# Needs the FLY_API_TOKEN repository secret: a deploy token for holler-docs.
+# Deploy the docs to Fly (app awp-docs, which serves docs.agentwireprotocol.com) on every push to main.
+# Needs the FLY_API_TOKEN repository secret: a deploy token for awp-docs.
 name: Deploy to Fly
 
 on:

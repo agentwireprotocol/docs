@@ -8,6 +8,16 @@ import { negotiate } from './negotiate.mjs';
 const port = Number(process.env.PORT ?? 8080);
 const host = process.env.HOST ?? '0.0.0.0';
 
+const domain = 'docs.agentwireprotocol.com';
+
 http
-  .createServer((req, res) => negotiate(req, res, () => handler(req, res)))
+  .createServer((req, res) => {
+    // The fly.dev host sends visitors to the domain.
+    if (req.headers.host === 'awp-docs.fly.dev') {
+      res.writeHead(301, { Location: `https://${domain}${req.url ?? '/'}` });
+      res.end();
+      return;
+    }
+    negotiate(req, res, () => handler(req, res));
+  })
   .listen(port, host, () => console.log(`awp docs on http://${host}:${port}`));
