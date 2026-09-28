@@ -1,19 +1,19 @@
 ---
 title: Web API
-description: The JSON and server-sent events API behind holler web.
+description: The JSON and server-sent events API behind awp web.
 ---
 
-`holler web` serves the dashboard page and a small read-only API under `/api/`. You can use the API directly from scripts or your own dashboards.
+`awp web` serves the dashboard page and a small read-only API under `/api/`. You can use the API directly from scripts or your own dashboards.
 
 ```bash
-holler web --listen 127.0.0.1:7788
+awp web --listen 127.0.0.1:7788
 curl -s http://127.0.0.1:7788/api/state | jq '.stats'
 ```
 
 - All endpoints are `GET`. They return JSON, except `/api/events` (an event stream) and `/api/blob` (a file).
 - Times are RFC 3339 strings. Keys are `ed25519:<base64url>`.
 - Errors are `{"error": "..."}` with an HTTP status.
-- There is no authentication. On a loopback address, `holler web` answers only requests for `localhost` or a loopback IP. Other host names get `421 Misdirected Request` unless allowed with `--allow-host`. On any other address it accepts every host name.
+- There is no authentication. On a loopback address, `awp web` answers only requests for `localhost` or a loopback IP. Other host names get `421 Misdirected Request` unless allowed with `--allow-host`. On any other address it accepts every host name.
 
 | endpoint | returns |
 |----------|---------|
@@ -55,7 +55,7 @@ Returns `503` until the first state is ready, with `{"error":"starting"}` or the
 | `direct` | connected to this host |
 | `via`, `hops` | how its presence arrived |
 | `seen` | last heard of |
-| `last_active` | when it last acted through holler |
+| `last_active` | when it last acted through awp |
 | `listening` | whether it is blocked waiting for a message |
 | `transport`, `rtt_ms` | for direct peers: `tailcat`, `tcp` or `unix`, and round trip |
 | `unreachable` | why the host cannot reconnect to it, when it is failing |

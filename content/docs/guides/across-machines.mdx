@@ -3,7 +3,7 @@ title: Working across machines
 description: Connect agents on laptops, cloud sandboxes and private networks, and deal with sleep.
 ---
 
-holler's main case is two agents on different machines, often behind NAT, often in sandboxes that sleep. This guide covers what to expect and the lessons from running it that way.
+awp's main case is two agents on different machines, often behind NAT, often in sandboxes that sleep. This guide covers what to expect and the lessons from running it that way.
 
 ## Pick a transport
 
@@ -15,17 +15,17 @@ holler's main case is two agents on different machines, often behind NAT, often 
 
 Tailcat is on by default. To add a private-network listener as well, list both in the home's config, so a daemon started on demand picks them up too:
 
-```json title="~/.holler/config.json"
+```json title="~/.awp/config.json"
 { "listen": ["tailcat", "tcp:[fdaa::3]:7000"] }
 ```
 
-Then restart the daemon with `holler down` and `holler up`. `HOLLER_LISTEN` and `holler daemon --listen` do the same for one start. See [Environment variables and config](/reference/environment).
+Then restart the daemon with `awp down` and `awp up`. `AWP_LISTEN` and `awp daemon --listen` do the same for one start. See [Environment variables and config](/reference/environment).
 
-Peers on the private network connect with `holler connect tcp:[fdaa::3]:7000`. Remember that TCP and Unix bindings have no transport encryption. The handshake still authenticates both keys, and holler refuses plain TCP to public addresses.
+Peers on the private network connect with `awp connect tcp:[fdaa::3]:7000`. Remember that TCP and Unix bindings have no transport encryption. The handshake still authenticates both keys, and awp refuses plain TCP to public addresses.
 
 ## Latency
 
-Once a connection is up, round trips are about 1 ms on one host and about 10 ms between cloud sandboxes in one region. `holler web` shows each link's latency.
+Once a connection is up, round trips are about 1 ms on one host and about 10 ms between cloud sandboxes in one region. `awp web` shows each link's latency.
 
 - A **fresh** tailcat dial takes seconds, not milliseconds.
 - The first round-trip measurement is taken about 3 seconds after a connection resumes, then with every ping (every 30 seconds when idle).
@@ -33,17 +33,17 @@ Once a connection is up, round trips are about 1 ms on one host and about 10 ms 
 
 ## Sleep and pause
 
-holler is built for sleep. Messages queue on disk and are kept for 7 days (`outbox_ttl`). While there is unfinished business, the awake side keeps retrying, at most 60 seconds apart. Nothing is lost or duplicated when the connection resumes. But there is one hard limit.
+awp is built for sleep. Messages queue on disk and are kept for 7 days (`outbox_ttl`). While there is unfinished business, the awake side keeps retrying, at most 60 seconds apart. Nothing is lost or duplicated when the connection resumes. But there is one hard limit.
 
 <Callout type="warn">
-A **paused** sandbox cannot be dialed over tailcat. Its tailcat listener waits on a DERP relay connection, and a frozen process cannot answer, so a connection attempt cannot wake it. This is tracked in [issue #4](https://github.com/hollerprotocol/holler/issues/4).
+A **paused** sandbox cannot be dialed over tailcat. Its tailcat listener waits on a DERP relay connection, and a frozen process cannot answer, so a connection attempt cannot wake it. This is tracked in [issue #4](https://github.com/agentwireprotocol/awp/issues/4).
 </Callout>
 
 Until there is a wake-on-connect binding (for example, a WebSocket through the sandbox's HTTP URL), work around it:
 
-1. **Let the sleepy side dial out.** If B may pause and A is always on, have B run `holler connect <A's address>`, not the other way round. When B wakes, it resumes the connection itself. B's dial-back address also lets A reconnect while B is awake.
+1. **Let the sleepy side dial out.** If B may pause and A is always on, have B run `awp connect <A's address>`, not the other way round. When B wakes, it resumes the connection itself. B's dial-back address also lets A reconnect while B is awake.
 2. **Keep the sandbox awake while it has work.** A long-running command keeps most sandboxes from pausing. For example, run a background loop through your platform's exec API for the duration of the task.
-3. **Don't block on a sleeping peer.** Use `holler wait` with a timeout, and treat exit code `2` as "nothing yet", not as failure.
+3. **Don't block on a sleeping peer.** Use `awp wait` with a timeout, and treat exit code `2` as "nothing yet", not as failure.
 
 ## Reconnecting after a restart
 
@@ -61,25 +61,25 @@ A lesson from running agents across sandboxes: some harness logins do not surviv
 
 ```bash
 # install and wire into harnesses
-curl -fsSL https://raw.githubusercontent.com/hollerprotocol/holler/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/agentwireprotocol/awp/main/install.sh | sh
 
-# bring it up with a clear name, and publish presence for holler web
-holler up --name codex@build-box --about "Release builds" --presence
+# bring it up with a clear name, and publish presence for awp web
+awp up --name codex@build-box --about "Release builds" --presence
 
 # connect to the always-on side
-holler connect <address>
+awp connect <address>
 
-holler peers
+awp peers
 ```
 
-`--name` and `--about` are remembered. `--presence` is not, and like the others it applies only when `holler up` starts the daemon. To publish presence on every start, set `"presence": true` in `config.json`. See [Presence](/concepts/presence).
+`--name` and `--about` are remembered. `--presence` is not, and like the others it applies only when `awp up` starts the daemon. To publish presence on every start, set `"presence": true` in `config.json`. See [Presence](/concepts/presence).
 
 ## Troubleshooting
 
 | symptom | check |
 |---------|-------|
-| `holler up` shows no address | tailcat is still starting; wait a few seconds, then `holler status` |
-| peer stuck in `reconnecting` | is the other side paused? `holler web` shows "can't reach" and the dial error |
-| messages not reaching the model | are hooks installed? `holler bootstrap --list`; otherwise `holler tail --once` |
+| `awp up` shows no address | tailcat is still starting; wait a few seconds, then `awp status` |
+| peer stuck in `reconnecting` | is the other side paused? `awp web` shows "can't reach" and the dial error |
+| messages not reaching the model | are hooks installed? `awp bootstrap --list`; otherwise `awp tail --once` |
 | an old version keeps coming back | restart harness sessions; an old MCP server restarts an old daemon |
-| anything else | `~/.holler/daemon.log`; restart with `holler down` then `holler daemon --trace` to log every protocol line |
+| anything else | `~/.awp/daemon.log`; restart with `awp down` then `awp daemon --trace` to log every protocol line |

@@ -1,38 +1,38 @@
 ---
 title: Contributing
-description: Build, test and release holler.
+description: Build, test and release awp.
 ---
 
-The source is at [github.com/hollerprotocol/holler](https://github.com/hollerprotocol/holler). The repository is public. Report bugs and propose changes in [issues](https://github.com/hollerprotocol/holler/issues), and send code as pull requests.
+The source is at [github.com/agentwireprotocol/awp](https://github.com/agentwireprotocol/awp). The repository is public. Report bugs and propose changes in [issues](https://github.com/agentwireprotocol/awp/issues), and send code as pull requests.
 
-holler is licensed under [Apache-2.0](https://github.com/hollerprotocol/holler/blob/main/LICENSE), the code and the spec alike. Contributions are accepted under the same license.
+awp is licensed under [Apache-2.0](https://github.com/agentwireprotocol/awp/blob/main/LICENSE), the code and the spec alike. Contributions are accepted under the same license.
 
 ## Layout
 
 | path | what |
 |------|------|
-| `cmd/holler` | the CLI |
+| `cmd/awp` | the CLI |
 | `internal/daemon` | the daemon and its control socket |
 | `internal/node` | the protocol engine: handshake, resume, grants, presence, mirroring |
 | `internal/store` | SQLite storage |
 | `internal/transport` | tailcat, TCP and Unix bindings |
 | `internal/mcp` | the MCP server |
 | `internal/control`, `internal/api` | the local API between the daemon and its clients |
-| `internal/bootstrap` | `holler bootstrap`: installing holler into each harness |
+| `internal/bootstrap` | `awp bootstrap`: installing awp into each harness |
 | `internal/harness` | harness names and detection from the environment |
 | `internal/render` | how the CLI, hooks and MCP server print messages |
-| `internal/web`, `web/` | `holler web`: the Go server and the page (React, built with bun) |
+| `internal/web`, `web/` | `awp web`: the Go server and the page (React, built with bun) |
 | `wire/` | message types, framing, ULIDs, canonical JSON, grants; importable by other Go peers |
-| `plugin/holler/` | the agent plugin: skill, MCP config, hooks |
+| `plugin/awp/` | the agent plugin: skill, MCP config, hooks |
 | `python/` | the independent Python peer and interop tests |
 | `scripts/` | release scripts: artifacts, version checks, release notes |
 | `SPEC.md`, `PROFILE.md`, `NOTES.md` | the protocol, the coding agent profile, implementation notes |
 
 ```text
  CLI ─┐                                                   ┌─ tailcat (embedded, tunnel port 1)
- MCP ─┼─ ~/.holler/holler.sock ─ daemon ─ node engine ────┼─ tcp:host:port (loopback / private only)
+ MCP ─┼─ ~/.awp/awp.sock ─ daemon ─ node engine ────┼─ tcp:host:port (loopback / private only)
 hook ─┘   (local control API)       │                     └─ unix:/path
-                              ~/.holler/holler.db  (SQLite)
+                              ~/.awp/awp.db  (SQLite)
 ```
 
 ## Build and test
@@ -41,13 +41,13 @@ You need Go 1.27 or later. The Python tests need Python 3 with the `cryptography
 
 ```bash
 make test      # go vet, go test -race, the Python peer's tests, Go↔Python interop
-make build     # ./bin/holler
+make build     # ./bin/awp
 make web       # build the web page with bun, embedded by the next build
-make plugin    # plugin/holler/libexec/holler-{linux,darwin}-{amd64,arm64}
+make plugin    # plugin/awp/libexec/awp-{linux,darwin}-{amd64,arm64}
 make dist      # release artifacts in dist/ (needs make web first)
 ```
 
-Without `make web`, the binary builds and `holler web` serves only its API.
+Without `make web`, the binary builds and `awp web` serves only its API.
 
 CI runs on every push to `main` and every pull request. It checks `gofmt`, typechecks and lints the web page, runs `go vet`, the Go tests with the race detector, the Python tests and interop, and cross-compiles the release artifacts.
 
@@ -69,11 +69,11 @@ The Python peer was written from `SPEC.md` alone, without reading the Go code. W
 ## Releasing
 
 1. Add a section to `CHANGELOG.md`.
-2. Set `version` in both plugin manifests: `plugin/holler/plugin.json` and `plugin/holler/.claude-plugin/plugin.json`.
+2. Set `version` in both plugin manifests: `plugin/awp/plugin.json` and `plugin/awp/.claude-plugin/plugin.json`.
 3. Push a tag:
 
 ```bash
-git tag -a v0.4.0 -m "holler v0.4.0" && git push origin v0.4.0
+git tag -a v0.4.0 -m "awp v0.4.0" && git push origin v0.4.0
 ```
 
 The release workflow runs CI, checks the version markers match the tag, builds the artifacts, and publishes the GitHub release with notes from the changelog.
@@ -81,13 +81,13 @@ The release workflow runs CI, checks the version markers match the tag, builds t
 ## Debugging
 
 ```bash
-holler down
-holler daemon --trace --verbose     # every protocol line, plus tailcat's logs
-tail -f ~/.holler/daemon.log
+awp down
+awp daemon --trace --verbose     # every protocol line, plus tailcat's logs
+tail -f ~/.awp/daemon.log
 ```
 
 Because the wire is NDJSON over tailcat's port 1, you can talk to a peer by hand: `tailcat <address>` shows its `hello`, and you can type JSON at it.
 
 ## Discussions
 
-Design happens in [issues](https://github.com/hollerprotocol/holler/issues). See [Roadmap](/project/roadmap) for the open threads.
+Design happens in [issues](https://github.com/agentwireprotocol/awp/issues). See [Roadmap](/project/roadmap) for the open threads.

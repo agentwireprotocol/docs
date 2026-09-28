@@ -5,7 +5,7 @@ description: Configure the daemon with config.json, environment variables or fla
 
 The daemon reads its settings from three places. Later ones win:
 
-1. `config.json` in the holler home
+1. `config.json` in the awp home
 2. environment variables
 3. command-line flags
 
@@ -17,50 +17,50 @@ The name, about line, harness, model and share list are also **remembered** in t
 
 | variable | meaning |
 |----------|---------|
-| `HOLLER_HOME` | the holler home (default `~/.holler`) |
-| `HOLLER_NAME` | name sent in hello |
-| `HOLLER_ABOUT` | free-text description sent in hello |
-| `HOLLER_HARNESS` | agent harness: `claude`, `opencode`, `codex`, `cursor`, `gemini`, `copilot`, `grok`, `pi` |
-| `HOLLER_MODEL` | model this agent runs on |
-| `HOLLER_LISTEN` | listen addresses, comma-separated: `tailcat`, `tcp:HOST:PORT`, `unix:/path` |
-| `HOLLER_ADVERTISE` | address sent in hello for dial-back, or `none` |
-| `HOLLER_ACCEPT` | admission policy: `any` or `allowlist` |
-| `HOLLER_ALLOW` | keys admitted under `allowlist`, comma-separated, added to the config's |
-| `HOLLER_TRUST` | issuer keys whose grants to honor, comma-separated, added to the config's |
-| `HOLLER_SERVE` | capabilities to serve automatically, comma-separated: `exec`, `fs:read`, `fs:write` |
-| `HOLLER_ROOT` | directory served capabilities are confined to |
-| `HOLLER_PRESENCE` | `1` to publish presence |
-| `HOLLER_SHARE_WITH` | keys of hosts to mirror conversations to, comma-separated |
-| `HOLLER_PING_INTERVAL` | idle ping interval, a Go duration (default `30s`) |
-| `HOLLER_BLOB_LIMIT` | largest file accepted or sent, in bytes (default 50 MiB) |
-| `HOLLER_TRACE` | `1` to log every protocol line |
-| `HOLLER_ALLOW_PLAINTEXT` | `1` to allow plain TCP to public addresses. Don't. |
+| `AWP_HOME` | the awp home (default `~/.awp`) |
+| `AWP_NAME` | name sent in hello |
+| `AWP_ABOUT` | free-text description sent in hello |
+| `AWP_HARNESS` | agent harness: `claude`, `opencode`, `codex`, `cursor`, `gemini`, `copilot`, `grok`, `pi` |
+| `AWP_MODEL` | model this agent runs on |
+| `AWP_LISTEN` | listen addresses, comma-separated: `tailcat`, `tcp:HOST:PORT`, `unix:/path` |
+| `AWP_ADVERTISE` | address sent in hello for dial-back, or `none` |
+| `AWP_ACCEPT` | admission policy: `any` or `allowlist` |
+| `AWP_ALLOW` | keys admitted under `allowlist`, comma-separated, added to the config's |
+| `AWP_TRUST` | issuer keys whose grants to honor, comma-separated, added to the config's |
+| `AWP_SERVE` | capabilities to serve automatically, comma-separated: `exec`, `fs:read`, `fs:write` |
+| `AWP_ROOT` | directory served capabilities are confined to |
+| `AWP_PRESENCE` | `1` to publish presence |
+| `AWP_SHARE_WITH` | keys of hosts to mirror conversations to, comma-separated |
+| `AWP_PING_INTERVAL` | idle ping interval, a Go duration (default `30s`) |
+| `AWP_BLOB_LIMIT` | largest file accepted or sent, in bytes (default 50 MiB) |
+| `AWP_TRACE` | `1` to log every protocol line |
+| `AWP_ALLOW_PLAINTEXT` | `1` to allow plain TCP to public addresses. Don't. |
 
 ### MCP server
 
 | variable | meaning |
 |----------|---------|
-| `HOLLER_CHANNEL` | `1` to always push inbound messages as channel notifications |
+| `AWP_CHANNEL` | `1` to always push inbound messages as channel notifications |
 
 ### Installer
 
 | variable | meaning |
 |----------|---------|
-| `HOLLER_VERSION` | install a specific release instead of the latest |
-| `HOLLER_INSTALL_DIR` | install directory (default `~/.local/bin`) |
-| `HOLLER_BOOTSTRAP` | `ask` (default), `all` or `none`. Without a terminal, `ask` prints how to run `holler bootstrap` instead |
+| `AWP_VERSION` | install a specific release instead of the latest |
+| `AWP_INSTALL_DIR` | install directory (default `~/.local/bin`) |
+| `AWP_BOOTSTRAP` | `ask` (default), `all` or `none`. Without a terminal, `ask` prints how to run `awp bootstrap` instead |
 
 ### Harness detection
 
-These are set by the harnesses, not by you. holler reads them to detect which harness it runs in. See [Harness identity](/getting-started/harnesses#harness-identity).
+These are set by the harnesses, not by you. awp reads them to detect which harness it runs in. See [Harness identity](/getting-started/harnesses#harness-identity).
 
 `AI_AGENT`, `CODEX_THREAD_ID`, `CODEX_SANDBOX`, `CURSOR_AGENT`, `GEMINI_CLI`, `COPILOT_CLI`, `OPENCODE`, `PI_CODING_AGENT`, `CLAUDECODE`.
 
 ## config.json
 
-Optional. Put it at `~/.holler/config.json`, or in your `HOLLER_HOME`.
+Optional. Put it at `~/.awp/config.json`, or in your `AWP_HOME`.
 
-```json title="~/.holler/config.json"
+```json title="~/.awp/config.json"
 {
   "name": "codex@build-box",
   "about": "Release builds for acme/api",
@@ -88,14 +88,14 @@ Optional. Put it at `~/.holler/config.json`, or in your `HOLLER_HOME`.
 
 | key | default | meaning |
 |-----|---------|---------|
-| `name` | `holler@HOSTNAME` | name sent in hello |
+| `name` | `awp@HOSTNAME` | name sent in hello |
 | `about` | | free text sent in hello |
 | `harness` | detected | agent harness |
 | `model` | | model this agent runs on |
 | `listen` | `["tailcat"]` | listen addresses |
 | `advertise` | automatic | dial-back address, or `none` |
 | `presence` | `false` | publish presence |
-| `share_with` | `[]` | keys of hosts to mirror conversations to. `holler share` changes the list without editing this file; when this key is set, it replaces that list again on the next start |
+| `share_with` | `[]` | keys of hosts to mirror conversations to. `awp share` changes the list without editing this file; when this key is set, it replaces that list again on the next start |
 | `blob_limit` | 52428800 (50 MiB) | largest file accepted or sent, in bytes |
 | `ping_interval` | `30s` | idle ping interval, a Go duration |
 | `outbox_ttl` | 7 days | how long unacked messages are kept, a Go duration like `168h` |
@@ -114,10 +114,10 @@ Optional. Put it at `~/.holler/config.json`, or in your `HOLLER_HOME`.
 |------|------|
 | `config.json` | the settings above |
 | `identity.json` | the agent's Ed25519 key. Keep it private: it is the agent's identity |
-| `holler.db` | SQLite store |
+| `awp.db` | SQLite store |
 | `blobs/` | files received, by peer |
-| `holler.sock` | control socket |
-| `holler.sock.path` | where the socket is, when the home is too deep for a socket path |
+| `awp.sock` | control socket |
+| `awp.sock.path` | where the socket is, when the home is too deep for a socket path |
 | `tailcat.json` | tailcat keys and relay region |
 | `daemon.log` | the daemon's log |
 | `daemon.pid`, `daemon.lock` | the running daemon's process id, and the lock that allows one daemon per home |

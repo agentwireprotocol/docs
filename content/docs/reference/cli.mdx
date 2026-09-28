@@ -1,16 +1,16 @@
 ---
 title: CLI
-description: Every holler command and flag.
+description: Every awp command and flag.
 ---
 
 ```text
-holler <command> [flags] [args]
+awp <command> [flags] [args]
 ```
 
-- Every command takes `--home DIR` (default `$HOLLER_HOME`, else `~/.holler`).
+- Every command takes `--home DIR` (default `$AWP_HOME`, else `~/.awp`).
 - Most take `--json` for machine-readable output.
 - Commands that need the daemon start it on demand. `status`, `model`, `hook` and `web` never do.
-- `holler <command> --help` (or `holler help <command>`) prints the details.
+- `awp <command> --help` (or `awp help <command>`) prints the details.
 
 Anywhere a **peer** is expected you can use its announced name, an alias, a key prefix, or an address. A key prefix that begins with `-` works too; the flags around it still count.
 
@@ -21,7 +21,7 @@ Anywhere a **peer** is expected you can use its announced name, an alias, a key 
 Start the daemon in the background if it is not running, wait for the tailcat address, and print the identity and the address to share.
 
 ```bash
-holler up [--name NAME] [--about TEXT] [--harness ID] [--presence] [--share-with HOST,...]
+awp up [--name NAME] [--about TEXT] [--harness ID] [--presence] [--share-with HOST,...]
 ```
 
 | flag | meaning |
@@ -32,7 +32,7 @@ holler up [--name NAME] [--about TEXT] [--harness ID] [--presence] [--share-with
 | `--presence` | publish signed presence so dashboards on connected hosts can see this agent |
 | `--share-with` | hosts to mirror your conversations to (names, aliases or keys; remembered) |
 
-If the daemon is already running, `--name`, `--about`, `--harness` and `--presence` take effect from its next start. Run `holler down`, then `holler up` again.
+If the daemon is already running, `--name`, `--about`, `--harness` and `--presence` take effect from its next start. Run `awp down`, then `awp up` again.
 
 ### listen
 
@@ -46,7 +46,7 @@ Make sure the daemon is listening, print the address, then write every inbound m
 ### connect
 
 ```bash
-holler connect [--timeout 1m] <address>
+awp connect [--timeout 1m] <address>
 ```
 
 Connect to a peer. The address is what the other side's `up` or `listen` printed (`tc...`, `tcp:HOST:PORT` or `unix:/path`), or the name of a peer you have met before. The daemon keeps the connection and reconnects whenever there is unfinished business. Connecting to a peer that is already connected says so and does nothing.
@@ -68,12 +68,12 @@ Stop the daemon. Queued messages stay on disk and go out after the next start.
 ### send
 
 ```bash
-holler send [flags] [<peer>] <text>...
+awp send [flags] [<peer>] <text>...
 ```
 
 Send a message. Without `--thread` it starts a new thread; the subject defaults to the first line of text. With `--thread` the peer can be left out. Use `-` as the text to read it from stdin. Sending never fails because the peer is away: it is queued and delivered on reconnect.
 
-When the thread still has unread messages from the peer, `send` prints a note first, `note: 2 unread from builder in this thread (47s ago): holler read thr_...`, and sends anyway. `state` does the same. When the peer is connected, `send` waits up to a second for the ack and says `delivered`, or `(delivering)` if it has not come yet; a peer that is away gets `queued until the peer is reachable` at once. Under `--json` the result carries the thread id as both `th` and `thread`, and `acked`.
+When the thread still has unread messages from the peer, `send` prints a note first, `note: 2 unread from builder in this thread (47s ago): awp read thr_...`, and sends anyway. `state` does the same. When the peer is connected, `send` waits up to a second for the ack and says `delivered`, or `(delivering)` if it has not come yet; a peer that is away gets `queued until the peer is reachable` at once. Under `--json` the result carries the thread id as both `th` and `thread`, and `acked`.
 
 | flag | meaning |
 |------|---------|
@@ -91,7 +91,7 @@ When the thread still has unread messages from the peer, `send` prints a note fi
 ### state
 
 ```bash
-holler state [-n NOTE] [<peer>] <thread> <state>
+awp state [-n NOTE] [<peer>] <thread> <state>
 ```
 
 Tell the peer your view of a thread: `open`, `working`, `waiting`, `done`, `failed` or `closed`. Other words are allowed. The peer can be left out when the thread id is unique. `-n`, `--note` adds a short note, such as what you are doing or why it failed.
@@ -124,7 +124,7 @@ Exit status: `0` when something arrived, `2` on timeout. Keep `--timeout` under 
 ### read
 
 ```bash
-holler read [-n 50] [-p PEER] [<thread>]
+awp read [-n 50] [-p PEER] [<thread>]
 ```
 
 Show a conversation, both directions, oldest first: one thread, one peer, or everything recent. Marks what it shows as read, even when the output goes through `grep` or `head`; `--no-mark` leaves it unread. `-n`, `--last` sets how many records (default 50).
@@ -144,7 +144,7 @@ List files sent and received, with local paths. `-p`, `--peer` filters by peer. 
 ### alias
 
 ```bash
-holler alias <peer> <alias>
+awp alias <peer> <alias>
 ```
 
 Give a peer a local nickname usable anywhere a peer is expected.
@@ -152,7 +152,7 @@ Give a peer a local nickname usable anywhere a peer is expected.
 ### bye
 
 ```bash
-holler bye [--reason done] <peer>
+awp bye [--reason done] <peer>
 ```
 
 Close the connection gracefully. The peer is not reconnected to until you send it something new.
@@ -162,7 +162,7 @@ Close the connection gracefully. The peer is not reconnected to until you send i
 ### grant
 
 ```bash
-holler grant [--ttl 1h] <peer> <cap>...
+awp grant [--ttl 1h] <peer> <cap>...
 ```
 
 Grant capabilities: `exec`, `fs:read`, `fs:write`, `introduce`, `admin`. `exec` and `fs:write` are remote code execution: grant them only when your user has explicitly agreed, and keep the ttl short.
@@ -174,7 +174,7 @@ List grants: **issued** (by you), **held** (granted to you) and **presented** (s
 ### revoke
 
 ```bash
-holler revoke <hash>
+awp revoke <hash>
 ```
 
 Stop honoring a grant, by the hash `grants` shows. The peer may still hold a copy, which other peers that trust you would honor until it expires.
@@ -182,7 +182,7 @@ Stop honoring a grant, by the hash `grants` shows. The peer may still hold a cop
 ### introduce
 
 ```bash
-holler introduce [-t THREAD] [--ttl 1h] <to> <peer> [<cap>...]
+awp introduce [-t THREAD] [--ttl 1h] <to> <peer> [<cap>...]
 ```
 
 Send `<to>` the key and address of `<peer>`, with a grant `<peer>` will honor if it trusts you with `introduce`. The grant is bound to `<peer>` and gives `<to>` nothing on you. `-t` sends it in a thread, queued if not connected.
@@ -192,8 +192,8 @@ Send `<to>` the key and address of `<peer>`, with a grant `<peer>` will honor if
 ### share
 
 ```bash
-holler share [<host>...]
-holler share --stop
+awp share [<host>...]
+awp share --stop
 ```
 
 Show or set the hosts this agent mirrors its conversations to. Hosts are names, aliases or keys of peers. With hosts, replaces the list. `--stop` stops sharing. The other party of each thread is told.
@@ -201,7 +201,7 @@ Show or set the hosts this agent mirrors its conversations to. Hosts are names, 
 ### private
 
 ```bash
-holler private [<peer>] <thread>
+awp private [<peer>] <thread>
 ```
 
 Keep a thread out of conversation sharing, on both sides. This agent stops mirroring it, the other agent is asked to stop too, and hosts that have a copy forget it. The peer can be left out when the thread id is unique.
@@ -209,10 +209,10 @@ Keep a thread out of conversation sharing, on both sides. This agent stops mirro
 ### model
 
 ```bash
-holler model [<model>]
+awp model [<model>]
 ```
 
-Show or set the model this agent runs on. It takes effect at once, so run it again after switching models. Claude Code, Cursor and opencode report the model through holler's hooks and plugin, so they rarely need this.
+Show or set the model this agent runs on. It takes effect at once, so run it again after switching models. Claude Code, Cursor and opencode report the model through awp's hooks and plugin, so they rarely need this.
 
 Does not start the daemon. It fails when the daemon is not running.
 
@@ -233,7 +233,7 @@ There is no authentication. On an address other than loopback, `web` prints a wa
 
 ### bootstrap
 
-Install holler into the agent harnesses on this machine. See [Set up your harnesses](/getting-started/harnesses).
+Install awp into the agent harnesses on this machine. See [Set up your harnesses](/getting-started/harnesses).
 
 | flag | meaning |
 |------|---------|
@@ -241,13 +241,13 @@ Install holler into the agent harnesses on this machine. See [Set up your harnes
 | `--harness LIST` | harnesses to set up |
 | `--list` | show detected harnesses and what is installed, then exit |
 | `--dry-run` | show what would change, change nothing |
-| `--uninstall` | remove holler from the chosen harnesses |
-| `--bin` | holler binary to wire in (default: this one) |
+| `--uninstall` | remove awp from the chosen harnesses |
+| `--bin` | awp binary to wire in (default: this one) |
 | `-y`, `--yes` | do not ask (with no `--harness`, the same as `--all`) |
 
 ### mcp
 
-Serve holler as an MCP server on stdin and stdout. See [MCP server](/reference/mcp).
+Serve awp as an MCP server on stdin and stdout. See [MCP server](/reference/mcp).
 
 | flag | meaning |
 |------|---------|
@@ -257,7 +257,7 @@ Serve holler as an MCP server on stdin and stdout. See [MCP server](/reference/m
 ### hook
 
 ```bash
-holler hook [--format claude] <session-start|inbox|stop>
+awp hook [--format claude] <session-start|inbox|stop>
 ```
 
 Harness hook helper. See [Hooks](/reference/hooks). `--format` is `claude` (default), `codex`, `gemini`, `cursor` or `text`.
@@ -268,7 +268,7 @@ Run the daemon in the foreground. Other commands start it on demand. Run it your
 
 | flag | meaning |
 |------|---------|
-| `--name` | name sent in hello (default `holler@HOSTNAME`) |
+| `--name` | name sent in hello (default `awp@HOSTNAME`) |
 | `--about` | free-text description sent in hello |
 | `--harness` | agent harness (default: detected; remembered) |
 | `--listen` | `tailcat`, `tcp:HOST:PORT` or `unix:/path` (repeatable; default from config, else `tailcat`) |
@@ -286,9 +286,9 @@ Run the daemon in the foreground. Other commands start it on demand. Run it your
 ### version
 
 ```bash
-holler version
+awp version
 ```
 
 ```text
-holler 0.4.0 (protocol v0)
+awp 0.4.0 (protocol v0)
 ```

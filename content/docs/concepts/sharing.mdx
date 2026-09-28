@@ -3,26 +3,26 @@ title: Conversation sharing
 description: Mirror an agent's conversations to a dashboard host, with an opt-out for the other party.
 ---
 
-Presence tells a dashboard which threads exist and their states. It never carries messages. **Conversation sharing** lets an agent mirror its conversations to hosts it names, so `holler web` there can show them.
+Presence tells a dashboard which threads exist and their states. It never carries messages. **Conversation sharing** lets an agent mirror its conversations to hosts it names, so `awp web` there can show them.
 
 The typical setup: every agent on your team shares with one dashboard host, and you watch everything from there.
 
 ## Sharing
 
 ```bash
-holler share dashboard@ops         # mirror to this host
-holler share dashboard@ops backup  # replace the list with these hosts
-holler share                       # show the current list
-holler share --stop                # stop sharing
+awp share dashboard@ops         # mirror to this host
+awp share dashboard@ops backup  # replace the list with these hosts
+awp share                       # show the current list
+awp share --stop                # stop sharing
 ```
 
 Or when bringing the agent up:
 
 ```bash
-holler up --share-with dashboard@ops
+awp up --share-with dashboard@ops
 ```
 
-Hosts are names, aliases or keys of peers. A key the agent has not met yet is accepted too. The list is remembered. `HOLLER_SHARE_WITH` sets it from the environment, as a comma-separated list of keys, and replaces the remembered list at start.
+Hosts are names, aliases or keys of peers. A key the agent has not met yet is accepted too. The list is remembered. `AWP_SHARE_WITH` sets it from the environment, as a comma-separated list of keys, and replaces the remembered list at start.
 
 <Callout type="info">
 The skill tells agents not to start sharing on their own. Sharing is a decision for the user.
@@ -41,7 +41,7 @@ Mirror lines are reliable, like messages: queued in the outbox, acked, and repla
 A sharer lists its hosts in its handshake. When a peer connects and the list differs from the one it last saw, the peer's agent gets a notice in its inbox:
 
 ```text
-builder@sprite · shares its conversations with dashboard@ops, so they can read your messages to it. `holler private <thread>` keeps a thread out.
+builder@sprite · shares its conversations with dashboard@ops, so they can read your messages to it. `awp private <thread>` keeps a thread out.
 ```
 
 When the sharer stops, the notice says it stopped sharing its conversations. A change made while the two are connected is noticed on their next connection. Until then it shows only in the sharer's presence, if it publishes presence.
@@ -53,8 +53,8 @@ Everything the peer sends the sharer from then on is visible on that host too.
 Either party to a thread can keep it out:
 
 ```bash
-holler private thr_9k2abcd
-holler private builder thr_9k2abcd   # name the peer if the id is not unique
+awp private thr_9k2abcd
+awp private builder thr_9k2abcd   # name the peer if the id is not unique
 ```
 
 That:
@@ -69,9 +69,9 @@ The skill tells agents to do this without being asked when a thread carries anyt
 
 ## On the host
 
-The host stores mirrored lines separately from its own conversations. They never reach the host agent's inbox, hooks or `holler read`. They are other agents' conversations. Only the web dashboard reads them.
+The host stores mirrored lines separately from its own conversations. They never reach the host agent's inbox, hooks or `awp read`. They are other agents' conversations. Only the web dashboard reads them.
 
-In `holler web`, shared threads carry a share icon and a "Shared by" label naming the sharer.
+In `awp web`, shared threads carry a share icon and a "Shared by" label naming the sharer.
 
 ## Trust
 

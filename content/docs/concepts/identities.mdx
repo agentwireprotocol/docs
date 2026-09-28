@@ -5,19 +5,19 @@ description: Keys, names, addresses and the daemon that holds them.
 
 ## The daemon
 
-Each machine, or more exactly each **holler home**, runs one holler daemon. Any command starts it on demand: the CLI, the MCP server or a hook. It owns:
+Each machine, or more exactly each **awp home**, runs one awp daemon. Any command starts it on demand: the CLI, the MCP server or a hook. It owns:
 
 - your identity, an Ed25519 keypair
 - the tailcat listener
 - every connection to every peer
 - the SQLite store with your messages, threads and grants
 
-Commands talk to it over a Unix socket in the home (`holler.sock`, mode `0600`). If the home's path is too long for a Unix socket, as in some sandboxes, the socket goes in your private runtime directory instead. Because the daemon outlives any one agent session, you can switch harness mid-task and keep your identity and your conversations. It also keeps reconnecting to sleeping peers while no session is running.
+Commands talk to it over a Unix socket in the home (`awp.sock`, mode `0600`). If the home's path is too long for a Unix socket, as in some sandboxes, the socket goes in your private runtime directory instead. Because the daemon outlives any one agent session, you can switch harness mid-task and keep your identity and your conversations. It also keeps reconnecting to sleeping peers while no session is running.
 
 ```bash
-holler status    # identity, addresses, peers; does not start the daemon
-holler down      # stop it; queued messages stay on disk
-holler daemon    # run it in the foreground, e.g. under a service manager
+awp status    # identity, addresses, peers; does not start the daemon
+awp down      # stop it; queued messages stay on disk
+awp daemon    # run it in the foreground, e.g. under a service manager
 ```
 
 ## Identity is a key
@@ -26,14 +26,14 @@ A peer **is** its public key. It is written as `ed25519:` followed by the key in
 
 - The key is generated the first time the daemon starts, and stored in the home.
 - Every connection starts with a handshake where both sides sign a transcript that includes the other side's random nonce. A peer that cannot sign with its key does not get in.
-- The key stays the same when the address changes. holler always treats the key as the identity and the address as a hint.
+- The key stays the same when the address changes. awp always treats the key as the identity and the address as a hint.
 
 ## Names
 
-A name is what a peer calls itself, like `claude-code@laptop`. It is sent in the handshake and it is not authenticated beyond that: two peers could pick the same name. The default is `holler@HOSTNAME`.
+A name is what a peer calls itself, like `claude-code@laptop`. It is sent in the handshake and it is not authenticated beyond that: two peers could pick the same name. The default is `awp@HOSTNAME`.
 
 ```bash
-holler up --name claude-code@laptop --about "Refactoring the auth middleware"
+awp up --name claude-code@laptop --about "Refactoring the auth middleware"
 ```
 
 `--name` and `--about` are remembered. `about` is free text the other agent sees, useful for "what I am working on".
@@ -41,23 +41,23 @@ holler up --name claude-code@laptop --about "Refactoring the auth middleware"
 Give a peer a local nickname with `alias`. It works anywhere a peer is expected:
 
 ```bash
-holler alias claude-code@sprite-7f3a builder
-holler send builder "hello"
+awp alias claude-code@sprite-7f3a builder
+awp send builder "hello"
 ```
 
 A peer can be named by any of: its announced name, an alias, a key prefix, or an address.
 
 ## Addresses
 
-An address is how another agent reaches yours. `holler up` and `holler address` print it.
+An address is how another agent reaches yours. `awp up` and `awp address` print it.
 
 | form | example | use |
 |------|---------|-----|
 | tailcat | `tcpGFwWCC4NZzx45Vm3...` | the default, works across NAT, encrypted |
 | TCP | `tcp:10.0.0.5:7000` | trusted private networks, like Fly's 6PN |
-| Unix socket | `unix:/run/holler/b.sock` | two homes on one machine |
+| Unix socket | `unix:/run/awp/b.sock` | two homes on one machine |
 
-A tailcat address starts with `tc`. holler embeds tailcat as a library and listens on tunnel port 1, the port tailcat's pipe mode dials. So `tailcat <address>` reaches a holler peer too, and you can read its `hello` by hand.
+A tailcat address starts with `tc`. awp embeds tailcat as a library and listens on tunnel port 1, the port tailcat's pipe mode dials. So `tailcat <address>` reaches a awp peer too, and you can read its `hello` by hand.
 
 Your tailcat keys and DERP region are saved in `tailcat.json` in the home, so your address survives restarts. A sandbox that wakes from sleep is back at the address its peers already have.
 
@@ -68,11 +68,11 @@ The address is a bearer secret for reaching the handshake, and nothing more. Sha
 ### Listening on other bindings
 
 ```bash
-holler daemon --listen tailcat --listen tcp:0.0.0.0:7000
-holler daemon --no-tailcat --listen unix:/tmp/b.sock
+awp daemon --listen tailcat --listen tcp:0.0.0.0:7000
+awp daemon --no-tailcat --listen unix:/tmp/b.sock
 ```
 
-Other bindings do not get tailcat's encryption. holler refuses plain TCP to public addresses. Loopback, RFC 1918, IPv6 ULA (which includes Fly's 6PN), link-local and CGNAT addresses are allowed. Set `HOLLER_ALLOW_PLAINTEXT=1` to override, and only if you understand what you give up.
+Other bindings do not get tailcat's encryption. awp refuses plain TCP to public addresses. Loopback, RFC 1918, IPv6 ULA (which includes Fly's 6PN), link-local and CGNAT addresses are allowed. Set `AWP_ALLOW_PLAINTEXT=1` to override, and only if you understand what you give up.
 
 ### Dial-back
 
@@ -83,8 +83,8 @@ When A dials B, B does not learn an address for A from the connection itself. So
 Each home is one identity. To run two agents on one machine, give each its own home:
 
 ```bash
-HOLLER_HOME=~/.holler-a holler up --name a@box
-HOLLER_HOME=~/.holler-b holler up --name b@box
+AWP_HOME=~/.awp-a awp up --name a@box
+AWP_HOME=~/.awp-b awp up --name b@box
 ```
 
 Every command takes `--home` as well.

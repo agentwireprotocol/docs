@@ -29,7 +29,7 @@ const rehypePlugins = [rehypeCode];
 // alone.
 function compressDev() {
   return {
-    name: 'holler-docs:compress-dev',
+    name: 'awp-docs:compress-dev',
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use(
@@ -43,7 +43,7 @@ function compressDev() {
 // production.
 function negotiateDev() {
   return {
-    name: 'holler-docs:negotiate-dev',
+    name: 'awp-docs:negotiate-dev',
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use(negotiate);

@@ -1,4 +1,4 @@
-// The docs' social cards, drawn to match holler.fly.dev's: the hero's waves
+// The docs' social cards, drawn to match awp.fly.dev's: the hero's waves
 // and dots (src/og/background.png, from the landing page's scripts/og.py,
 // run with --background), the wordmark, and the page's section, title and
 // description in Inter. Rendered by Takumi at build time.
@@ -48,11 +48,11 @@ export function docsCard({ title, description, section }: { title: string; descr
                 backgroundImage: 'radial-gradient(circle at 34% 30%, #ffffff 0%, #b4b4bb 40%, #3f3f46 100%)',
               }}
             />
-            <div style={{ marginLeft: 12, fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em' }}>holler</div>
+            <div style={{ marginLeft: 12, fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em' }}>awp</div>
             <div style={{ marginLeft: 16, fontSize: 30, fontWeight: 400, color: INK3 }}>/</div>
             <div style={{ marginLeft: 16, fontSize: 30, fontWeight: 500, color: INK2, letterSpacing: '-0.02em' }}>docs</div>
           </div>
-          <div style={{ fontSize: 20, fontWeight: 500, color: INK3 }}>holler-docs.fly.dev</div>
+          <div style={{ fontSize: 20, fontWeight: 500, color: INK3 }}>awp-docs.fly.dev</div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', marginTop: 96 }}>

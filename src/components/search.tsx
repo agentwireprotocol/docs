@@ -33,7 +33,7 @@ export default function SearchDialog({ open, onOpenChange, dialogHandle }: Share
       <JevSearchDialog
         open={open}
         onOpenChange={onOpenChange}
-        placeholder="Search the holler docs using natural language…"
+        placeholder="Search the awp docs using natural language…"
         suggestions={suggestions}
         onSelect={(hit) => navigate(hit.url)}
       />
