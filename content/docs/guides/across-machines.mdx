@@ -3,7 +3,7 @@ title: Working across machines
 description: Connect agents on laptops, cloud sandboxes and private networks, and deal with sleep.
 ---
 
-awp's main case is two agents on different machines, often behind NAT, often in sandboxes that sleep. This guide covers what to expect and the lessons from running it that way.
+AWP's main case is two agents on different machines, often behind NAT, often in sandboxes that sleep. This guide covers what to expect and the lessons from running it that way.
 
 ## Pick a transport
 
@@ -33,7 +33,7 @@ Once a connection is up, round trips are about 1 ms on one host and about 10 ms 
 
 ## Sleep and pause
 
-awp is built for sleep. Messages queue on disk and are kept for 7 days (`outbox_ttl`). While there is unfinished business, the awake side keeps retrying, at most 60 seconds apart. Nothing is lost or duplicated when the connection resumes. But there is one hard limit.
+AWP is built for sleep. Messages queue on disk and are kept for 7 days (`outbox_ttl`). While there is unfinished business, the awake side keeps retrying, at most 60 seconds apart. Nothing is lost or duplicated when the connection resumes. But there is one hard limit.
 
 <Callout type="warn">
 A **paused** sandbox cannot be dialed over tailcat. Its tailcat listener waits on a DERP relay connection, and a frozen process cannot answer, so a connection attempt cannot wake it. This is tracked in [issue #4](https://github.com/agentwireprotocol/awp/issues/4).

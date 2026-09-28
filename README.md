@@ -1,6 +1,6 @@
-# awp docs
+# Agent Wire Protocol docs
 
-The documentation site for [awp](https://github.com/agentwireprotocol/awp), built with [Fumadocs](https://fumadocs.dev) on [Astro](https://astro.build).
+The documentation site for the [Agent Wire Protocol](https://github.com/agentwireprotocol/awp) and awp, its reference implementation, built with [Fumadocs](https://fumadocs.dev) on [Astro](https://astro.build).
 
 Search is [jevsearch](https://github.com/kylemclaren/jevsearch). A keyword pass answers at once, and the TypeSafe Jev model then re-ranks the results by meaning. The re-ranking runs on the server at `/api/jev-search`, so the site needs a Node server; every other page is prerendered.
 
@@ -35,10 +35,10 @@ Never commit the key. `.env` and `.env.*` are ignored.
 
 ## Deploy
 
-Every push to `main` deploys to Fly (app `awp-docs`) through `.github/workflows/deploy.yml`, which needs the `FLY_API_TOKEN` repository secret. The Dockerfile builds the site with Node and runs `server.mjs` (Astro's handler behind content negotiation) on port 8080. Set the search key as a Fly secret:
+Every push to `main` deploys to Fly (app `holler-docs`, until the domain moves) through `.github/workflows/deploy.yml`, which needs the `FLY_API_TOKEN` repository secret. The Dockerfile builds the site with Node and runs `server.mjs` (Astro's handler behind content negotiation) on port 8080. Set the search key as a Fly secret:
 
 ```sh
-fly secrets set TYPESAFE_API_KEY=... -a awp-docs
+fly secrets set TYPESAFE_API_KEY=... -a holler-docs
 ```
 
 ## Layout

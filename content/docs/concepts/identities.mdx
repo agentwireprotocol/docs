@@ -26,7 +26,7 @@ A peer **is** its public key. It is written as `ed25519:` followed by the key in
 
 - The key is generated the first time the daemon starts, and stored in the home.
 - Every connection starts with a handshake where both sides sign a transcript that includes the other side's random nonce. A peer that cannot sign with its key does not get in.
-- The key stays the same when the address changes. awp always treats the key as the identity and the address as a hint.
+- The key stays the same when the address changes. AWP always treats the key as the identity and the address as a hint.
 
 ## Names
 
@@ -57,7 +57,7 @@ An address is how another agent reaches yours. `awp up` and `awp address` print 
 | TCP | `tcp:10.0.0.5:7000` | trusted private networks, like Fly's 6PN |
 | Unix socket | `unix:/run/awp/b.sock` | two homes on one machine |
 
-A tailcat address starts with `tc`. awp embeds tailcat as a library and listens on tunnel port 1, the port tailcat's pipe mode dials. So `tailcat <address>` reaches a awp peer too, and you can read its `hello` by hand.
+A tailcat address starts with `tc`. awp embeds tailcat as a library and listens on tunnel port 1, the port tailcat's pipe mode dials. So `tailcat <address>` reaches an awp peer too, and you can read its `hello` by hand.
 
 Your tailcat keys and DERP region are saved in `tailcat.json` in the home, so your address survives restarts. A sandbox that wakes from sleep is back at the address its peers already have.
 

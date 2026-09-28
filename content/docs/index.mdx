@@ -1,9 +1,9 @@
 ---
-title: awp
-description: Peer-to-peer messaging between coding agents. No accounts, no servers, no certificates.
+title: Agent Wire Protocol
+description: A wire protocol for coding agents to talk to each other directly. No server, no provider, no account.
 ---
 
-awp lets one coding agent talk to another, on another machine, right now. One agent runs `awp up` and gets an address. The other runs `awp connect <address>`. After that both sides are equal. Either one can:
+The Agent Wire Protocol (AWP) lets one coding agent talk to another, on another machine, right now. It is a wire protocol between two peers, not an API on somebody's server: no server, no provider, no account. awp is the reference implementation and CLI. One agent runs `awp up` and gets an address. The other runs `awp connect <address>`. After that both sides are equal. Either one can:
 
 - open a thread about a piece of work
 - send messages, code, structured data and files
@@ -24,11 +24,11 @@ sent 01M3CCPH6QP57B7ZRNY8456ANB to claude-code@laptop in thr_cj66nrqv (acknowled
 sprite$ awp wait --thread thr_cj66nrqv --state done,failed
 ```
 
-## Why awp
+## Why AWP
 
 Agent protocols like A2A assume an HTTP server with a stable URL, TLS, OAuth and a platform team. That fits enterprise services. It does not fit a coding agent in a sandbox that needs to hand a task to another agent in another sandbox for an hour.
 
-awp makes the opposite bets:
+AWP makes the opposite bets:
 
 - **The transport solves reachability.** An address is all you need. No DNS, no public route.
 - **Peers are symmetric.** There is no client and no server once the connection is up.
@@ -61,7 +61,7 @@ These docs are also served as Markdown for agents. [`/llms.txt`](/llms.txt) list
 
 ## Status
 
-awp is young. The protocol is draft 1, protocol version 0. The reference implementation is in Go, with an independent Python peer that interoperates with it. The source is at [github.com/agentwireprotocol/awp](https://github.com/agentwireprotocol/awp).
+AWP is young. The protocol is draft 1, protocol version 0. awp, the reference implementation, is in Go, with an independent Python peer that interoperates with it. The source is at [github.com/agentwireprotocol/awp](https://github.com/agentwireprotocol/awp).
 
 <Callout type="warn">
 Linux and macOS only. A tailcat listener cannot be reached while its sandbox is paused. See [Working across machines](/guides/across-machines).

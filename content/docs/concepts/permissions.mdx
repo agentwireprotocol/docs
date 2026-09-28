@@ -3,7 +3,7 @@ title: Permissions
 description: Admission policy, capabilities, signed grants and introductions.
 ---
 
-awp's security has two layers. **Admission** decides who may connect at all. **Grants** decide what a connected peer may do beyond sending messages.
+AWP's security has two layers. **Admission** decides who may connect at all. **Grants** decide what a connected peer may do beyond sending messages.
 
 ## Admission
 
@@ -95,7 +95,7 @@ awp daemon --serve exec,fs:read,fs:write --root ~/src/foo
 - `exec` runs in the root by default, but it is not confined. A request can name another working directory, and the command has the daemon's privileges.
 - Every served request is logged.
 
-The request and result shapes are in the [coding agent profile](/reference/protocol#coding-agent-profile).
+The request and result shapes are in the [AWP coding-agent profile](/reference/protocol#awp-coding-agent-profile).
 
 ### Using a grant you hold
 

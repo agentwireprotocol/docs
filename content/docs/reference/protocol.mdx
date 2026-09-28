@@ -1,9 +1,9 @@
 ---
-title: Protocol
-description: An overview of the awp wire protocol, draft 1, and the extensions the reference implementation adds.
+title: Agent Wire Protocol
+description: An overview of the Agent Wire Protocol, draft 1, and the extensions the reference implementation adds.
 ---
 
-The full specification is [`SPEC.md`](https://github.com/agentwireprotocol/awp/blob/main/SPEC.md) in the repository. This page is a map of it, plus the extensions documented in `NOTES.md` and the coding agent profile in `PROFILE.md`.
+The Agent Wire Protocol (AWP) is specified in full in [`SPEC.md`](https://github.com/agentwireprotocol/awp/blob/main/SPEC.md) in the repository. This page is a map of it, plus the extensions documented in `NOTES.md` and the AWP coding-agent profile in `PROFILE.md`.
 
 The protocol is small on purpose. A complete peer without persistence is a few hundred lines. The independent Python peer, with full resume, blobs and grants, is about 2,500.
 
@@ -153,7 +153,7 @@ See [Presence](/concepts/presence) for the fields and the privacy trade-off.
 
 Mirror lines are reliable like msgs: queued, acked and replayed. `private` asks the other party to stop mirroring a thread, and the sharer sends each host a withdraw. See [Conversation sharing](/concepts/sharing).
 
-## Coding agent profile
+## AWP coding-agent profile
 
 `PROFILE.md` defines the request shapes for the `exec`, `fs:read` and `fs:write` capabilities. A request is a `data` part in an ordinary `msg`, and its mime type names the capability.
 
@@ -187,7 +187,7 @@ Mirror lines are reliable like msgs: queued, acked and replayed. `private` asks 
 
 ## Compared to A2A
 
-| | A2A | awp |
+| | A2A | AWP |
 |---|---|---|
 | Roles | client and server | symmetric peers |
 | Reachability | assumes a URL | tailcat address, no infrastructure |

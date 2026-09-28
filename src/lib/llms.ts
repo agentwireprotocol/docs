@@ -93,7 +93,7 @@ export async function llmsIndex() {
     // Sidebar separators become sections.
     .replace(/^\s*- \*\*(.+)\*\*$/gm, '\n## $1\n')
     // The home page is the introduction; its description is the summary.
-    .replace(/^- \[awp\]\(\/\)(: .*)?$/m, '- [Introduction](/)')
+    .replace(/^- \[Agent Wire Protocol\]\(\/\)(: .*)?$/m, '- [Introduction](/)')
     // Point the links at the Markdown, which is what an agent reading this wants.
     .replace(/\]\((\/[^)]*)\)/g, (_m, url: string) => {
       const page = source.getPages().find((p) => p.url === url);
@@ -106,6 +106,6 @@ export async function llmsIndex() {
 ## Optional
 
 - [Everything in one file](${siteUrl}/llms-full.txt): every page above, as Markdown
-- [Specification](https://github.com/agentwireprotocol/awp/blob/main/SPEC.md): the awp protocol, draft 1
+- [Specification](https://github.com/agentwireprotocol/awp/blob/main/SPEC.md): the Agent Wire Protocol, draft 1
 `;
 }
