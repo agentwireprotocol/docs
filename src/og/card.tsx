@@ -48,8 +48,7 @@ export function docsCard({ title, description, section }: { title: string; descr
                 backgroundImage: 'radial-gradient(circle at 34% 30%, #ffffff 0%, #b4b4bb 40%, #3f3f46 100%)',
               }}
             />
-            <div style={{ marginLeft: 12, fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em' }}>awp</div>
-            <div style={{ marginLeft: 14, fontSize: 24, fontWeight: 500, color: INK2, letterSpacing: '-0.02em' }}>Agent Wire Protocol</div>
+            <div style={{ marginLeft: 12, fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em' }}>Agent Wire Protocol</div>
           </div>
           <div style={{ fontSize: 20, fontWeight: 500, color: INK3 }}>holler-docs.fly.dev</div>
         </div>
