@@ -54,7 +54,6 @@ function negotiateDev() {
 export default defineConfig({
   // The public origin: social cards need absolute image URLs.
   site: 'https://holler-docs.fly.dev',
-  site: 'https://holler-docs.fly.dev',
   // Pages are prerendered; only /api/jev-search runs on the server, since it
   // holds the TypeSafe key.
   adapter: node({ mode: 'standalone' }),
