@@ -14,10 +14,10 @@ export interface PageHeaderProps {
 // Markdown.
 export function PageHeader({ title, description, hero, markdownUrl }: PageHeaderProps) {
   return (
-    <header className={cn('not-prose', hero ? 'holler-hero' : 'mb-8')}>
+    <header className={cn('not-prose', hero ? 'awp-hero' : 'mb-8')}>
       {hero && <span className="orb" aria-hidden="true" />}
-      <h1 className="holler-title">{title}</h1>
-      {description && <p className="holler-lede">{description}</p>}
+      <h1 className="awp-title">{title}</h1>
+      {description && <p className="awp-lede">{description}</p>}
       <div className="page-actions">
         <MarkdownCopyButton markdownUrl={markdownUrl} />
       </div>

@@ -10,7 +10,7 @@ export const source = loader({
 });
 
 // The sidebar calls the home page "Introduction"; the page itself keeps its
-// title, "holler".
+// title, "Agent Wire Protocol".
 export function pageTree() {
   const tree = source.getPageTree();
   return {

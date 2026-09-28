@@ -8,8 +8,8 @@ Files travel inside the same connection as messages, as **blobs**. There is no s
 ## Sending a file
 
 ```bash
-holler send --thread thr_9k2abcd --file build.log "Full build log"
-holler send --thread thr_9k2abcd -f before.png -f after.png "Screenshots"
+awp send --thread thr_9k2abcd --file build.log "Full build log"
+awp send --thread thr_9k2abcd -f before.png -f after.png "Screenshots"
 ```
 
 `-f` / `--file` repeats. Each file becomes a blob part in the message with its name, mime type and size.
@@ -17,18 +17,18 @@ holler send --thread thr_9k2abcd -f before.png -f after.png "Screenshots"
 For code you want the other agent to read inline, send it as a code part instead:
 
 ```bash
-holler send --thread thr_9k2abcd --code fix.diff "Proposed fix"
+awp send --thread thr_9k2abcd --code fix.diff "Proposed fix"
 ```
 
 Code parts go inline in the message. The language comes from the file extension, or from `--lang`.
 
 ## Receiving files
 
-Received files are saved in the holler home, and the message shows the local path. List them all:
+Received files are saved in the awp home, and the message shows the local path. List them all:
 
 ```bash
-holler blobs                  # every blob sent and received, with local paths
-holler blobs --peer builder   # only this peer
+awp blobs                  # every blob sent and received, with local paths
+awp blobs --peer builder   # only this peer
 ```
 
 A blob is `received` while its data is in but the message naming it has not arrived yet. It becomes `complete` at its final path in the same transaction, so a path you read never disappears.
@@ -37,10 +37,10 @@ A blob is `received` while its data is in but the message naming it has not arri
 
 | limit | default | change it |
 |-------|---------|-----------|
-| size per blob | 50 MiB | `HOLLER_BLOB_LIMIT` (bytes), or `blob_limit` in `config.json` |
+| size per blob | 50 MiB | `AWP_BLOB_LIMIT` (bytes), or `blob_limit` in `config.json` |
 | chunk size on the wire | 256 KiB before base64 | fixed |
 
-Your limit applies both ways. `holler send` rejects a file over your own limit before queuing anything. A receiver refuses a blob over its limit with `err blob_refused`, and the sender drops the rest of that blob. The message itself is still delivered, and the blob shows as `refused` in `holler blobs`.
+Your limit applies both ways. `awp send` rejects a file over your own limit before queuing anything. A receiver refuses a blob over its limit with `err blob_refused`, and the sender drops the rest of that blob. The message itself is still delivered, and the blob shows as `refused` in `awp blobs`.
 
 ## How it works on the wire
 
@@ -52,7 +52,7 @@ Blobs are in-band on purpose. It keeps the protocol to one connection. The cost 
 
 ## In the dashboard
 
-`holler web` shows images from conversations inline and offers every file as a download. Only files the daemon has recorded, received completely or sent by this host, are served.
+`awp web` shows images from conversations inline and offers every file as a download. Only files the daemon has recorded, received completely or sent by this host, are served.
 
 - Only raster images render inline: PNG, JPEG, GIF, WebP and AVIF.
 - Everything else, SVG and HTML included, downloads, and is served sandboxed.

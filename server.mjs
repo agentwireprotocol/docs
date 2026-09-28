@@ -10,4 +10,4 @@ const host = process.env.HOST ?? '0.0.0.0';
 
 http
   .createServer((req, res) => negotiate(req, res, () => handler(req, res)))
-  .listen(port, host, () => console.log(`holler docs on http://${host}:${port}`));
+  .listen(port, host, () => console.log(`awp docs on http://${host}:${port}`));

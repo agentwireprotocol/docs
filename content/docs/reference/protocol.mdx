@@ -1,9 +1,9 @@
 ---
-title: Protocol
-description: An overview of the holler wire protocol, draft 1, and the extensions the reference implementation adds.
+title: Agent Wire Protocol
+description: An overview of the Agent Wire Protocol, draft 1, and the extensions the reference implementation adds.
 ---
 
-The full specification is [`SPEC.md`](https://github.com/hollerprotocol/holler/blob/main/SPEC.md) in the repository. This page is a map of it, plus the extensions documented in `NOTES.md` and the coding agent profile in `PROFILE.md`.
+The Agent Wire Protocol (AWP) is specified in full in [`SPEC.md`](https://github.com/agentwireprotocol/awp/blob/main/SPEC.md) in the repository. This page is a map of it, plus the extensions documented in `NOTES.md` and the AWP coding-agent profile in `PROFILE.md`.
 
 The protocol is small on purpose. A complete peer without persistence is a few hundred lines. The independent Python peer, with full resume, blobs and grants, is about 2,500.
 
@@ -11,7 +11,7 @@ The protocol is small on purpose. A complete peer without persistence is a few h
 
 Any reliable, ordered, bidirectional byte stream works.
 
-- **tailcat** is the primary binding: WireGuard, peer to peer. holler listens on tunnel port 1.
+- **tailcat** is the primary binding: WireGuard, peer to peer. awp listens on tunnel port 1.
 - **TCP and Unix sockets** are allowed on trusted networks. They have no transport encryption, so the handshake still runs, and peers should refuse plaintext TCP across untrusted networks.
 
 It does not matter which side listened. After the handshake, both sides are equal.
@@ -53,7 +53,7 @@ A → B  resume       B → A  resume
 `auth.sig` is an Ed25519 signature over:
 
 ```text
-"holler-auth-v0" || 0x00 || my_hello_line || 0x00 || peer_hello_line
+"awp-auth-v0" || 0x00 || my_hello_line || 0x00 || peer_hello_line
 ```
 
 using the exact hello bytes on the wire. Because it covers the other side's nonce, it cannot be replayed. A peer rejects a hello carrying its own key, which stops reflection attacks.
@@ -153,30 +153,30 @@ See [Presence](/concepts/presence) for the fields and the privacy trade-off.
 
 Mirror lines are reliable like msgs: queued, acked and replayed. `private` asks the other party to stop mirroring a thread, and the sharer sends each host a withdraw. See [Conversation sharing](/concepts/sharing).
 
-## Coding agent profile
+## AWP coding-agent profile
 
 `PROFILE.md` defines the request shapes for the `exec`, `fs:read` and `fs:write` capabilities. A request is a `data` part in an ordinary `msg`, and its mime type names the capability.
 
 | request mime | capability | result mime |
 |--------------|------------|-------------|
-| `application/vnd.holler.exec+json` | `exec` | `application/vnd.holler.exec-result+json` |
-| `application/vnd.holler.fs-read+json` | `fs:read` | `application/vnd.holler.fs-read-result+json` |
-| `application/vnd.holler.fs-write+json` | `fs:write` | `application/vnd.holler.fs-write-result+json` |
-| `application/vnd.holler.admin+json` | `admin` | not defined yet |
+| `application/vnd.awp.exec+json` | `exec` | `application/vnd.awp.exec-result+json` |
+| `application/vnd.awp.fs-read+json` | `fs:read` | `application/vnd.awp.fs-read-result+json` |
+| `application/vnd.awp.fs-write+json` | `fs:write` | `application/vnd.awp.fs-write-result+json` |
+| `application/vnd.awp.admin+json` | `admin` | not defined yet |
 
 ```json title="exec request"
-{"k":"data","mime":"application/vnd.holler.exec+json",
+{"k":"data","mime":"application/vnd.awp.exec+json",
  "data":{"cmd":["make","test"],"cwd":"services/api","env":{"CI":"1"},"timeout":600,"stdin":""}}
 ```
 
 ```json title="exec result"
-{"k":"data","mime":"application/vnd.holler.exec-result+json",
+{"k":"data","mime":"application/vnd.awp.exec-result+json",
  "data":{"exit":0,"duration_ms":8123,"stdout":"...","stderr":"...","stdout_truncated":false}}
 ```
 
 ```json title="fs:read and fs:write requests"
-{"k":"data","mime":"application/vnd.holler.fs-read+json","data":{"path":"go.mod","offset":0,"length":65536}}
-{"k":"data","mime":"application/vnd.holler.fs-write+json",
+{"k":"data","mime":"application/vnd.awp.fs-read+json","data":{"path":"go.mod","offset":0,"length":65536}}
+{"k":"data","mime":"application/vnd.awp.fs-write+json",
  "data":{"path":"notes/todo.md","content":"...","encoding":"utf-8","append":false,"mkdir":true}}
 ```
 
@@ -187,7 +187,7 @@ Mirror lines are reliable like msgs: queued, acked and replayed. `private` asks 
 
 ## Compared to A2A
 
-| | A2A | holler |
+| | A2A | AWP |
 |---|---|---|
 | Roles | client and server | symmetric peers |
 | Reachability | assumes a URL | tailcat address, no infrastructure |

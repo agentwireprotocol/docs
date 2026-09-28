@@ -3,7 +3,7 @@ title: Multi-agent patterns
 description: Build teams of agents from two-party threads, and what is built and what is not.
 ---
 
-holler's threads have exactly two sides: one asker, one doer. That is deliberate (see [why](/concepts/threads#why-threads-have-exactly-two-sides)). Any size of team can still be built from those reliable pairs.
+AWP's threads have exactly two sides: one asker, one doer. That is deliberate (see [why](/concepts/threads#why-threads-have-exactly-two-sides)). Any size of team can still be built from those reliable pairs.
 
 ## Patterns that work today
 
@@ -12,17 +12,17 @@ holler's threads have exactly two sides: one asker, one doer. That is deliberate
 One agent opens a connection to each worker and one thread per unit of work.
 
 ```bash
-holler send worker-1 --subject "Port package auth" "..."
-holler send worker-2 --subject "Port package billing" "..."
-holler send worker-3 --subject "Port package search" "..."
-holler threads --open
+awp send worker-1 --subject "Port package auth" "..."
+awp send worker-2 --subject "Port package billing" "..."
+awp send worker-3 --subject "Port package search" "..."
+awp threads --open
 ```
 
 The coordinator waits on each thread, answers questions, and merges results. Every thread has a clear owner and state.
 
 ### Hierarchy
 
-A worker can itself delegate. Each supervisor answers for its subtree. This works today. `holler web` shows the threads, but not the tree of who delegated what.
+A worker can itself delegate. Each supervisor answers for its subtree. This works today. `awp web` shows the threads, but not the tree of who delegated what.
 
 ### Pipeline
 
@@ -38,25 +38,25 @@ One agent proposes, another attacks. Two threads with assigned roles, and the co
 
 ### Observer
 
-Watch without taking part. This is built: [presence](/concepts/presence), `holler web` and [conversation sharing](/concepts/sharing).
+Watch without taking part. This is built: [presence](/concepts/presence), `awp web` and [conversation sharing](/concepts/sharing).
 
 ## Introductions
 
 A coordinator can connect two workers directly, so they talk without relaying through it:
 
 ```bash
-holler introduce worker-1 worker-2
+awp introduce worker-1 worker-2
 ```
 
 worker-1 gets worker-2's key and address, and can then message it by name. The coordinator must be connected to worker-1, or pass `--thread` to queue the introduction.
 
-To give worker-1 capabilities on worker-2, list them: `holler introduce worker-1 worker-2 fs:read`. worker-2 honors them only if it granted the coordinator `introduce`. See [Permissions](/concepts/permissions#trust-and-introductions).
+To give worker-1 capabilities on worker-2, list them: `awp introduce worker-1 worker-2 fs:read`. worker-2 honors them only if it granted the coordinator `introduce`. See [Permissions](/concepts/permissions#trust-and-introductions).
 
 ## Models of collaboration
 
-[Issue #17](https://github.com/hollerprotocol/holler/issues/17) surveys the models of agent collaboration and how each could map onto holler. Where each stands today:
+[Issue #17](https://github.com/agentwireprotocol/awp/issues/17) surveys the models of agent collaboration and how each could map onto AWP. Where each stands today:
 
-| # | Model | What it is | Good for | In holler today |
+| # | Model | What it is | Good for | In AWP today |
 |---|-------|------------|----------|-----------------|
 | 1 | Asker and doer | One agent asks, one does, with clear states | Delegation | Built: threads |
 | 2 | Publish and subscribe | Post to a topic; anyone subscribed reads it | Sharing context, announcements, status | Not built |
@@ -68,11 +68,11 @@ To give worker-1 capabilities on worker-2, list them: `holler introduce worker-1
 | 8 | Ensemble | Several agents answer independently; answers are compared | High-stakes answers | A pattern: fan-out threads plus a merge step |
 | 9 | Debate | One proposes, another attacks | Design and security review | A pattern: two threads with assigned roles |
 | 10 | Pairing | Two agents work on one thing in real time | Tight collaboration | Not built; needs a streaming channel |
-| 11 | Observer | Watch without taking part | Oversight, debugging | Built: presence, `holler web`, sharing |
+| 11 | Observer | Watch without taking part | Oversight, debugging | Built: presence, `awp web`, sharing |
 
 ## What is built and what is not
 
-- **Built:** two-party threads, introductions, presence, `holler web` and conversation sharing. Every pattern above marked "a pattern" runs on these today, driven by the agents.
+- **Built:** two-party threads, introductions, presence, `awp web` and conversation sharing. Every pattern above marked "a pattern" runs on these today, driven by the agents.
 - **Not built:** multi-party rooms, topics, and any shared board. There is no `post`, `get`, `reply` or `subscribe` command. Every message goes to one named peer.
 
 Proposals for a shared board, a work queue and a market are discussed on the [Roadmap](/project/roadmap).

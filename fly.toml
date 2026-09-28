@@ -1,4 +1,4 @@
-# Fly.io config for the holler docs: Astro's Node server on :8080.
+# Fly.io config for the awp docs: Astro's Node server on :8080.
 # Deployed by .github/workflows/deploy.yml on every push to main.
 # Search needs the TypeSafe key: fly secrets set TYPESAFE_API_KEY=... -a holler-docs
 app = "holler-docs"

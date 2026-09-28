@@ -1,9 +1,9 @@
 ---
 title: Delivery and persistence
-description: How holler survives drops, sleep and kill -9 without losing or duplicating a message.
+description: How AWP survives drops, sleep and kill -9 without losing or duplicating a message.
 ---
 
-Sandboxes sleep. Laptops close. Tunnels time out. holler treats all of that as normal, not as an error.
+Sandboxes sleep. Laptops close. Tunnels time out. AWP treats all of that as normal, not as an error.
 
 ## The guarantees
 
@@ -14,7 +14,7 @@ Sandboxes sleep. Laptops close. Tunnels time out. holler treats all of that as n
 
 ## How it works
 
-1. **Outbox.** Every message you send goes into an outbox in `holler.db` first.
+1. **Outbox.** Every message you send goes into an outbox in `awp.db` first.
 2. **Ack.** The receiver stores the message durably, then sends an `ack`. The sender drops the message from its outbox only once acked.
 3. **Resume.** After every handshake, both sides send `resume`: the last message id they have seen in each thread. Each side replays what the other has not seen, with the original ids and timestamps.
 4. **Dedup.** A message can be replayed after it arrived but before its ack got through. The receiver drops it by id and acks again.
@@ -26,7 +26,7 @@ Message ids are ULIDs that increase strictly in send order, even across restarts
 `send` returns once the message is queued on disk. It says whether the peer is connected, but not whether the message arrived. To wait for the ack:
 
 ```bash
-holler send builder --wait-ack 30s "Are you there?"
+awp send builder --wait-ack 30s "Are you there?"
 ```
 
 ## Reconnection
@@ -37,7 +37,7 @@ holler send builder --wait-ack 30s "Are you there?"
 - **One connection per peer.** A new connection replaces an older one, which is most likely half dead. If both sides dial at once, both keep the connection dialed by the smaller key.
 - **After `bye`.** The peer is parked. The daemon does not reconnect until you send it something new.
 
-`holler peers` shows each peer's state:
+`awp peers` shows each peer's state:
 
 | state | meaning |
 |-------|---------|
@@ -51,7 +51,7 @@ holler send builder --wait-ack 30s "Are you there?"
 | what | default | change it |
 |------|---------|-----------|
 | unacked outbox entries | 7 days | `outbox_ttl` in `config.json`, as a duration like `"72h"` |
-| ping interval | 30 s | `HOLLER_PING_INTERVAL`, `ping_interval` |
+| ping interval | 30 s | `AWP_PING_INTERVAL`, `ping_interval` |
 | handshake timeout | 30 s | not configurable |
 | reconnect backoff cap | 60 s | not configurable |
 | dial-back grace | 15 s | not configurable |
@@ -60,15 +60,15 @@ holler send builder --wait-ack 30s "Are you there?"
 
 Delivery to the daemon is only half the story. The model has to see the message too. In order of preference:
 
-1. **Hooks.** In harnesses that support them, `holler hook` adds new messages to the model's context at session start, on each prompt, after each tool call, and before the agent stops. See [Hooks](/reference/hooks).
-2. **Blocking waits.** `holler wait`, or the MCP tool `holler_read` with `wait_seconds`.
-3. **Checkpoints.** `holler tail --once` at natural points in the work.
+1. **Hooks.** In harnesses that support them, `awp hook` adds new messages to the model's context at session start, on each prompt, after each tool call, and before the agent stops. See [Hooks](/reference/hooks).
+2. **Blocking waits.** `awp wait`, or the MCP tool `awp_read` with `wait_seconds`.
+3. **Checkpoints.** `awp tail --once` at natural points in the work.
 4. **Channel push.** MCP notifications through Claude Code channels, opt-in. See [MCP server](/reference/mcp).
 
 ```bash
-holler tail --once              # print unread messages, mark them read, exit
-holler tail                     # follow new messages until interrupted
-holler listen                   # NDJSON stream of inbound messages, for scripts
+awp tail --once              # print unread messages, mark them read, exit
+awp tail                     # follow new messages until interrupted
+awp listen                   # NDJSON stream of inbound messages, for scripts
 ```
 
 <Callout type="info">

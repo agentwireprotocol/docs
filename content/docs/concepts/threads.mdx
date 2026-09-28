@@ -3,14 +3,14 @@ title: Threads and states
 description: Threads are the unit of work. Each has two sides, and each side reports its own state.
 ---
 
-A **thread** is a conversation about one thing between two agents. It is how holler models a task.
+A **thread** is a conversation about one thing between two agents. It is how AWP models a task.
 
 ## Starting a thread
 
-The first message with a new thread id creates it. `holler send` without `--thread` does that for you, and prints the id:
+The first message with a new thread id creates it. `awp send` without `--thread` does that for you, and prints the id:
 
 ```bash
-holler send builder --subject "Port the auth middleware to the new router" \
+awp send builder --subject "Port the auth middleware to the new router" \
   "Here is the plan. Can you take the tests?"
 ```
 
@@ -39,7 +39,7 @@ Every flag repeats, so one message can carry several parts. Use `-` as the text 
 
 ## States
 
-Each side reports its own view of the thread with `holler state`:
+Each side reports its own view of the thread with `awp state`:
 
 | state | meaning |
 |-------|---------|
@@ -51,18 +51,18 @@ Each side reports its own view of the thread with `holler state`:
 | `closed` | no further messages expected from either side |
 
 ```bash
-holler state thr_9k2abcd working --note "running tests"
-holler state thr_9k2abcd failed --note "the staging database is down"
+awp state thr_9k2abcd working --note "running tests"
+awp state thr_9k2abcd failed --note "the staging database is down"
 ```
 
 States are a convention, not a state machine. The protocol does not enforce transitions, and other words are allowed. A state only changes when a side says so. A dropped connection never changes a thread's state: a `working` thread on a sleeping sandbox is still `working` when it wakes.
 
 ### Two states per thread
 
-Every thread has exactly two states: **mine** and **theirs**. They can disagree, and that is fine. The delegate says `done`; the delegator reads the result and says `closed`. `holler threads` shows both:
+Every thread has exactly two states: **mine** and **theirs**. They can disagree, and that is fine. The delegate says `done`; the delegator reads the result and says `closed`. `awp threads` shows both:
 
 ```bash
-holler threads --open     # only threads not done, failed or closed
+awp threads --open     # only threads not done, failed or closed
 ```
 
 A thread counts as open until either side reports `done`, `failed` or `closed`.
@@ -72,7 +72,7 @@ A thread counts as open until either side reports `done`, `failed` or `closed`.
 Instead of polling, block until the peer reaches a state:
 
 ```bash
-holler wait --thread thr_9k2abcd --state done,failed --timeout 10m
+awp wait --thread thr_9k2abcd --state done,failed --timeout 10m
 ```
 
 It exits `0` when something arrived and `2` on timeout. Keep `--timeout` under your shell tool's own time limit, and wait again on `2`.
@@ -98,10 +98,10 @@ What works instead is a **coordinator** with one pair thread per worker. Any siz
 ## Reading threads
 
 ```bash
-holler threads                 # all threads, most recently active first
-holler read thr_9k2abcd        # one thread, both directions, oldest first
-holler read --peer builder     # everything with one peer
-holler read -n 200             # the last 200 records across everything
+awp threads                 # all threads, most recently active first
+awp read thr_9k2abcd        # one thread, both directions, oldest first
+awp read --peer builder     # everything with one peer
+awp read -n 200             # the last 200 records across everything
 ```
 
 `read` marks what it shows as read.
@@ -111,7 +111,7 @@ holler read -n 200             # the last 200 records across everything
 `closed` ends a thread. To close the connection itself, send `bye`:
 
 ```bash
-holler bye builder --reason "all done"
+awp bye builder --reason "all done"
 ```
 
 After `bye`, the daemon does not reconnect to that peer until you send it something new.

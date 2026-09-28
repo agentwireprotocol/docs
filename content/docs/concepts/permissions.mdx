@@ -3,7 +3,7 @@ title: Permissions
 description: Admission policy, capabilities, signed grants and introductions.
 ---
 
-holler's security has two layers. **Admission** decides who may connect at all. **Grants** decide what a connected peer may do beyond sending messages.
+AWP's security has two layers. **Admission** decides who may connect at all. **Grants** decide what a connected peer may do beyond sending messages.
 
 ## Admission
 
@@ -15,12 +15,12 @@ The address gets a peer as far as the handshake. What happens next is your admis
 | `allowlist` | allowed keys, trusted keys, keys you dialed yourself, and keys that present a grant you honor |
 
 ```bash
-holler daemon --accept allowlist --allow ed25519:AbC... --allow ed25519:XyZ...
+awp daemon --accept allowlist --allow ed25519:AbC... --allow ed25519:XyZ...
 ```
 
 Or in `config.json`:
 
-```json title="~/.holler/config.json"
+```json title="~/.awp/config.json"
 {
   "policy": {
     "accept": "allowlist",
@@ -59,13 +59,13 @@ Everything else needs a **capability**, and a capability needs a grant.
 A grant is a statement, signed by your key, that another key may do something until a time.
 
 ```bash
-holler grant builder fs:read --ttl 2h
-holler grant builder exec --ttl 30m
-holler grants                  # issued, held and presented
-holler revoke 3f9a1c...        # stop honoring one, by its hash
+awp grant builder fs:read --ttl 2h
+awp grant builder exec --ttl 30m
+awp grants                  # issued, held and presented
+awp revoke 3f9a1c...        # stop honoring one, by its hash
 ```
 
-`holler grants` lists three kinds:
+`awp grants` lists three kinds:
 
 - **issued:** grants you gave
 - **held:** grants others gave you
@@ -75,7 +75,7 @@ holler revoke 3f9a1c...        # stop honoring one, by its hash
 
 ## What happens to a request
 
-A request is an ordinary message with a data part whose mime type names the capability, for example `application/vnd.holler.exec+json`. When one arrives:
+A request is an ordinary message with a data part whose mime type names the capability, for example `application/vnd.awp.exec+json`. When one arrives:
 
 - **No grant:** the message is acked, since it was received. Then the receiver replies `err forbidden` and does nothing. The agent sees it marked as made WITHOUT a grant.
 - **Grant held, and the daemon serves that capability:** the daemon runs it and replies in the thread.
@@ -86,8 +86,8 @@ A request is an ordinary message with a data part whose mime type names the capa
 The daemon serves nothing on its own unless you say so:
 
 ```bash
-holler daemon --serve fs:read --root ~/src/foo
-holler daemon --serve exec,fs:read,fs:write --root ~/src/foo
+awp daemon --serve fs:read --root ~/src/foo
+awp daemon --serve exec,fs:read,fs:write --root ~/src/foo
 ```
 
 - `--root` confines `fs:read` and `fs:write`. Files are opened through Go's `os.Root`, so `..` and symlinks cannot escape.
@@ -95,7 +95,7 @@ holler daemon --serve exec,fs:read,fs:write --root ~/src/foo
 - `exec` runs in the root by default, but it is not confined. A request can name another working directory, and the command has the daemon's privileges.
 - Every served request is logged.
 
-The request and result shapes are in the [coding agent profile](/reference/protocol#coding-agent-profile).
+The request and result shapes are in the [AWP coding-agent profile](/reference/protocol#awp-coding-agent-profile).
 
 ### Using a grant you hold
 
@@ -103,42 +103,42 @@ A grant is used by sending the request yourself, in any thread with the peer tha
 
 ```bash
 # read a file
-holler send builder --mime application/vnd.holler.fs-read+json \
+awp send builder --mime application/vnd.awp.fs-read+json \
   --data '{"path":"logs/daemon.log","offset":0,"length":65536}' "reading your daemon log"
 
 # run a command
-holler send builder --mime application/vnd.holler.exec+json \
+awp send builder --mime application/vnd.awp.exec+json \
   --data '{"cmd":["make","test"],"timeout":600}' "running the tests"
 
 # write a file
-holler send builder --mime application/vnd.holler.fs-write+json \
+awp send builder --mime application/vnd.awp.fs-write+json \
   --data '{"path":"notes/todo.md","content":"...","mkdir":true}' "updating the notes"
 ```
 
-The reply comes in the same thread: a result part, or `err forbidden` when the grant does not cover the request, because it expired or because the introduction that carried it did not include that capability. Wait for it with `holler wait --thread thr_...`.
+The reply comes in the same thread: a result part, or `err forbidden` when the grant does not cover the request, because it expired or because the introduction that carried it did not include that capability. Wait for it with `awp wait --thread thr_...`.
 
 ## Trust and introductions
 
 You can tell your daemon to honor grants issued by another key:
 
 ```bash
-holler daemon --trust ed25519:AbC...
+awp daemon --trust ed25519:AbC...
 ```
 
 **Introductions** let one peer connect two others. Say A trusts B with `introduce`, and B wants C to work with A:
 
 ```bash
 # on A: let B make introductions that carry fs:read
-holler grant B introduce fs:read
+awp grant B introduce fs:read
 
 # on B: send C A's key and address, with a grant A will honor
-holler introduce C A fs:read --ttl 1h
+awp introduce C A fs:read --ttl 1h
 ```
 
 C can now connect to A and present the grant. The rules:
 
 - **One level.** C cannot introduce someone else onward.
-- **Attenuated.** The introduced grant confers at most the other capabilities in the grant that gave B `introduce`. With `holler grant B introduce` alone, C is admitted but holds no capabilities.
+- **Attenuated.** The introduced grant confers at most the other capabilities in the grant that gave B `introduce`. With `awp grant B introduce` alone, C is admitted but holds no capabilities.
 - **Audience-bound.** The grant names A as its audience (`aud`). It gives C nothing on B.
 
 ## Untrusted input
@@ -151,4 +151,4 @@ The protocol marks nothing as trusted. Everything a peer sends is input from ano
 - Use `--accept allowlist` on any machine reachable by people you do not know.
 - Grant `exec` and `fs:write` only with your user's explicit approval, with short ttls.
 - Serve with `--root` set to the project, never your home directory.
-- Do not run holler over plaintext TCP across the internet.
+- Do not run awp over plaintext TCP across the internet.

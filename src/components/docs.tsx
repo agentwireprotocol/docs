@@ -9,7 +9,7 @@ import SearchDialog from './search';
 import { Logo } from './logo';
 import { PageHeader, type PageHeaderProps } from './page-header';
 
-export const repoUrl = 'https://github.com/hollerprotocol/holler';
+export const repoUrl = 'https://github.com/agentwireprotocol/awp';
 
 export function Docs({
   tree,
