@@ -1,16 +1,7 @@
 {
   "title": "Agent Wire Protocol",
   "pages": [
-    "index",
-    "---Getting started---",
-    "...getting-started",
-    "---Concepts---",
-    "...concepts",
-    "---Guides---",
-    "...guides",
-    "---Reference---",
-    "...reference",
-    "---Project---",
-    "...project"
+    "docs",
+    "reference"
   ]
 }

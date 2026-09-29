@@ -17,6 +17,8 @@ const meta = defineCollection({
     description: z.string().optional(),
     pages: z.array(z.string()).optional(),
     icon: z.string().optional(),
+    // A root folder is a sidebar tab: its pages get a sidebar of their own.
+    root: z.boolean().optional(),
   }),
 });
 

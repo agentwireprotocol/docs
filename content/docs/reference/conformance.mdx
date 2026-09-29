@@ -1,0 +1,90 @@
+---
+title: Conformance
+description: awp conform checks a peer against the specification, and the JSON Schema checks its messages.
+---
+
+Two things tell you whether a peer speaks the Agent Wire Protocol: its messages match the [JSON Schema](/reference/schema), and it behaves as the [specification](https://agentwireprotocol.com/spec) says when a scripted peer talks to it. `awp conform` checks both.
+
+## The runner
+
+`awp conform` is a peer with a key of its own. It connects to the peer under test once per scenario, drives each exchange, checks every line it receives against the schema, and reports what the peer did.
+
+```bash
+awp conform tcp:127.0.0.1:7000
+```
+
+```text
+awp conform: connect tcp:127.0.0.1:7000
+peer py-listen ed25519:gqJ9kGT_PaO8zUjEu1YgbYD81foZ3VI_CDC4xSfjIEQ (v0; caps chat blob grant)
+
+  ok    handshake       §7        hello without waiting, then auth and resume in order; the auth signature verifies
+  ok    version         §7.1      a hello with an unknown v gets err version and the connection closes
+  ok    auth-bad-sig    §7.2      an auth whose signature does not verify gets err auth and the connection closes
+  ok    bad-frame       §5        a line that is not a JSON object gets err bad_frame and the connection closes
+  ok    too-large       §5        a line over 1 MiB gets err too_large and the connection closes
+  ok    ping            §9.4      a ping is answered by a pong whose re is the ping's id
+  ok    msg-ack         §9.1, 9.2 a msg with text, code and data parts is acked, with the msg's id and thread
+  ok    state-ack       §8.1, 9.2 a state is acked like a msg
+  ok    dedup           §9.5      a msg delivered twice with the same id is acked both times
+  ok    unknown-type    §5        a message of an unknown type is ignored, or answered with a non-closing err unsupported
+  ok    unknown-field   §5        unknown fields in a msg and its parts are ignored; the msg is acked
+  ok    err-nonclosing  §9.7      an err with a non-closing code (unsupported) leaves the connection open
+  ok    chunk           §9.3      a msg with a blob part, followed by the blob in two chunks, is acked and refused only with blob_refused
+  ok    grant           §10.3     a grant message carrying a grant to the peer is accepted without an err
+  ok    bye             §9.6      a bye is answered with a bye and the connection closes
+
+15 passed, 0 failed, 0 skipped in 2.1s
+```
+
+The address is any the peer listens on: `tailcat:…`, `tcp:host:port` or `unix:/path`. Plain TCP to a public address is allowed here, unlike in `awp connect`, since the runner sends nothing worth protecting.
+
+Each scenario names the section of the specification it checks. A failed scenario prints what the peer did instead, and the exit status is 1. `--json` prints the whole report as JSON, `--trace` prints every line sent and received on stderr, and `--scenario` runs one scenario at a time:
+
+```bash
+awp conform --scenario handshake --trace tcp:127.0.0.1:7000
+awp conform --list
+```
+
+## When the peer connects
+
+A peer that only dials, or one you want to test as a client, connects to the runner instead:
+
+```bash
+awp conform --listen tcp:127.0.0.1:0 --run 'my-peer connect {addr}'
+```
+
+The runner listens, starts the command with `{addr}` replaced by the address it got, and runs the scenarios that fit one connection in turn: the handshake, ping, acks, dedup, unknown types and fields, non-closing errors, blobs, grants and bye. The four that break the connection on purpose (version, auth-bad-sig, bad-frame, too-large) are skipped, since they need a connection each; run them with the peer listening.
+
+## What the scenarios check
+
+| Scenario | Spec | The peer must |
+|---|---|---|
+| `handshake` | §7 | send `hello` without waiting for ours, then `auth` whose signature verifies with its key over both hello lines, then `resume` |
+| `version` | §7.1 | answer a `hello` with `v: 99` with `err version` and close |
+| `auth-bad-sig` | §7.2 | answer a bad signature with `err auth` and close |
+| `bad-frame` | §5 | answer a line that is not a JSON object with `err bad_frame` and close |
+| `too-large` | §5 | answer a line over 1 MiB with `err too_large` and close |
+| `ping` | §9.4 | answer a `ping` with a `pong` whose `re` is the ping's id |
+| `msg-ack` | §9.1, 9.2 | ack a `msg` with text, code and data parts, with the msg's `id` in `re` and its `th` |
+| `state-ack` | §8.1, 9.2 | ack a `state` |
+| `dedup` | §9.5 | ack a `msg` delivered twice with the same id both times |
+| `unknown-type` | §5 | ignore a message of an unknown type, or answer `err unsupported`, and keep the connection |
+| `unknown-field` | §5 | ignore unknown fields in a `msg` and its parts, and ack it |
+| `err-nonclosing` | §9.7 | keep the connection open after receiving `err unsupported` |
+| `chunk` | §9.3 | accept a `msg` with a blob part and the blob's two `chunk`s, or refuse with `err blob_refused` |
+| `grant` | §10.3 | accept a `grant` message carrying a grant to it |
+| `bye` | §9.6 | answer `bye` with `bye` and close |
+
+`chunk` needs `blob` in the peer's `hello.caps` and `grant` needs `grant`; without them the scenario is skipped. Every line the peer sends, in every scenario, is also checked against the schema: a line that does not validate fails the scenario it arrived in.
+
+What the runner cannot check on its own: replay after `resume`, since that needs a peer with messages of its own to replay. The reference implementation covers it in its Go/Python interop tests.
+
+## The schema
+
+The [schema reference](/reference/schema) lists every message and its fields. The same document is a JSON Schema (draft 2020-12) at [`agentwireprotocol.com/schema/v0/awp.schema.json`](https://agentwireprotocol.com/schema/v0/awp.schema.json), and `awp schema` prints it. Both are generated from the `wire` package of the reference implementation, so the Go types are the source of truth; a test in that repository fails when the files are stale, and every JSON example in the specification is validated against it.
+
+To write a peer in another language: generate your types from the schema, or check hand-written ones against it, the way the MCP SDKs vendor their spec's schema as a test oracle; keep the specification's examples as test vectors (the grant in section 10.2 carries a real signature); and run `awp conform` against your peer while you go.
+
+## The reference implementation
+
+`awp` runs the suite against itself in `go test`, in both modes, and `make conformance` runs it against the independent Python peer in `python/`, both ways. CI does both on every push.

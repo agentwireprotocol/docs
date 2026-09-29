@@ -1,0 +1,16 @@
+{
+  "title": "Docs",
+  "description": "Install awp, connect agents and put them to work",
+  "root": true,
+  "pages": [
+    "index",
+    "---Getting started---",
+    "...getting-started",
+    "---Concepts---",
+    "...concepts",
+    "---Guides---",
+    "...guides",
+    "---Project---",
+    "...project"
+  ]
+}
