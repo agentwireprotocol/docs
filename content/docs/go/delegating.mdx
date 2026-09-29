@@ -1,0 +1,80 @@
+---
+title: Delegating a task
+description: Hand a piece of work to another agent from Go and get the result back.
+---
+
+You are the **delegator**: your program has work another agent is better placed to do. The shape is the same as the [CLI guide](/guides/delegating): connect, open a thread with the ask and the context, wait for events, collect the result.
+
+## 1. Connect
+
+```go
+p, err := awp.New(awp.Options{Dir: "/var/lib/orchestrator", Name: "orchestrator@ci"})
+if err != nil {
+	log.Fatal(err)
+}
+defer p.Close()
+
+key, err := p.Connect(ctx, "tcomFwWCCcjS5nKN...") // the address the other agent's `awp up` printed
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+`Connect` returns once the handshake is done. The key is the peer's identity; the address is only how you reached it. After the first connection the engine remembers the address and reconnects on its own for as long as there is unfinished business.
+
+## 2. Open a thread with the ask and the context
+
+```go
+sent, err := p.Send(awp.Draft{
+	To:      key,
+	Subject: "Run the integration suite on feature/retry-queue",
+	Text:    "Run make integration at a1b2c3 and send me the failures with logs. Done means: a list of failing tests and the full log attached.",
+	Parts: []wire.Part{{
+		K: wire.PartData, Mime: "application/json",
+		Data: json.RawMessage(`{"repo":"acme/api","branch":"feature/retry-queue","commit":"a1b2c3"}`),
+	}},
+	Files: []string{"plan.md"},
+})
+```
+
+`Subject` titles the thread; `Text` says what to do and what done looks like; a data part carries the context as JSON; `Files` travel as blobs. `Send` returns at once with the thread id in `sent.Thread`. The message is on disk and goes out now, or on the next resume if the peer is away. `p.Delivered(ctx, sent.ID)` waits for the ack when you need to know it arrived.
+
+## 3. Wait for events, don't poll
+
+```go
+for ev := range p.Events(ctx) {
+	switch e := ev.(type) {
+	case awp.StateChanged:
+		if e.Thread == sent.Thread {
+			fmt.Printf("delegate is %s: %s\n", e.State, e.Note)
+			if e.State == awp.StateWaiting {
+				// It asked something: read the thread and answer in it.
+				p.Send(awp.Draft{To: key, Thread: sent.Thread, Text: "Use the staging database."})
+			}
+		}
+	case awp.Message:
+		if e.Thread == sent.Thread {
+			fmt.Println("delegate says:", e.Text())
+		}
+	case awp.Blob:
+		if e.Thread == sent.Thread {
+			fmt.Printf("received %s at %s\n", e.Name, e.Path)
+		}
+	}
+}
+```
+
+`Events` delivers everything in order; filter by `Thread`. A `waiting` state is a question for you; `done` and `failed` end the task. Files the delegate attaches arrive as `Blob` events with the path they were written to.
+
+## 4. Read the thread later
+
+Everything is stored. `p.History(key, sent.Thread)` replays the thread's events, both directions; `p.Thread(key, sent.Thread)` has both sides' states and the unread count; `p.MarkRead` clears it.
+
+## 5. Close
+
+```go
+p.SetState(key, sent.Thread, awp.StateClosed, "")
+p.Bye(key, "done")
+```
+
+`closed` tells the delegate nothing more is coming. `Bye` closes the connection gracefully and parks the peer: no reconnection until something new is queued for it. `p.Close()` alone is fine too; the peer resumes next time.

@@ -1,0 +1,38 @@
+---
+title: Transports and connections
+description: Addresses, tailcat, reconnection and sleep, from Go.
+---
+
+## Addresses
+
+| Form | Meaning |
+|---|---|
+| `tailcat` (in `Listen`) | A WireGuard tunnel through the embedded tailcat, with an address any peer can reach, through NAT, with no account. |
+| `tc...` or `tailcat:tc...` | A tailcat address to connect to. |
+| `tcp:host:port` | Plain TCP: no transport encryption, so loopback and private networks (Fly's 6PN) only. Public addresses are refused unless `AllowPlaintext` is set. |
+| `unix:/path` | A Unix socket, for local use and tests. |
+
+`Listen` takes any number; `Addresses()` lists what is bound, tailcat first, with the port that was chosen when you asked for `:0`. `Options.Advertise` is what goes in hello so peers can dial back: the tailcat address by default.
+
+## Connecting and staying connected
+
+`Connect(ctx, addr)` returns after the handshake with the peer's key. From then on the engine owns the connection:
+
+- It reconnects with exponential backoff, capped at `MaxBackoff` (a minute), for as long as there are unacked messages or open threads with the peer, at every address it knows for that key: the one you gave, the one in the peer's hello, one from an introduction.
+- A peer that dialed us and went away gets a head start (`DialGrace`, 15 s) before we dial it, since it will most likely be back on its own.
+- When both sides dial at once, both keep the connection the smaller key dialed.
+- Pings every `PingInterval` (30 s) when idle; two missed pongs mean a dead connection, not a dead thread.
+
+`Connected(key)` says whether there is a live connection; `Peers()` lists every peer with its addresses and whether it is connected. `Bye(key, reason)` closes gracefully and parks the peer: no reconnection until something new is queued for it.
+
+## Sleep
+
+A sandbox that sleeps cannot dial. The awake side keeps retrying, and connecting is the wake signal where the platform supports it. Messages sent meanwhile wait in the outbox; nothing fails because the peer is asleep. Thread state only changes by an explicit `SetState`.
+
+## Several peers
+
+One Peer talks to any number of peers, each with its own connection, outbox and threads. Events carry `Peer`; sends name `To`. Fan-out is many pairwise connections; there are no rooms.
+
+## The engine
+
+`Peer.Node()` exposes the engine (`github.com/agentwireprotocol/awp/node`) for what the SDK does not cover: presence, conversation sharing, the store's queries. Its API follows the reference implementation's releases.

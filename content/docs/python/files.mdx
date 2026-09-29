@@ -1,0 +1,32 @@
+---
+title: Files
+description: Send and receive files as blobs from Python, up to 50 MiB each.
+---
+
+Files travel as blobs: chunked in 256 KiB pieces, base64 in `chunk` lines, ahead of the message that names them. The SDK does all of it; you name paths.
+
+## Sending
+
+```python
+sent = peer.send(key, "log attached", thread=th, files=["/tmp/integration.log", "report.json"])
+```
+
+Each file becomes a blob part in the message (`name`, `mime`, `size`, `ref`), and its chunks are queued in the outbox before the message, so the receiver has the data by the time it sees the message. The file is copied under `state_dir/outgoing` when `send` runs; a change afterwards does not affect what is sent, and the copy is removed once the message is acked. `await peer.wait_ack(sent.id)` waits for that ack.
+
+A file over `blob_limit` raises `awp.CommandError` from `send`. One the receiver refuses (its own limit) comes back as a `PeerError` with `code` `blob_refused` and `ref` naming the blob; the message itself still arrives, minus the file.
+
+## Receiving
+
+```python
+case awp.Blob():
+    # event.name, event.mime, event.size, event.thread, event.ref, event.sha256
+    data = open(event.path, "rb").read()
+```
+
+`Blob` fires once both the data and the message naming it have arrived. The file sits under `state_dir/blobs/<peer>/<ref>`; move or copy it if you want it elsewhere, and use `event.name` for the sender's file name. `sha256` is the digest of what was written.
+
+The MIME type is the sender's guess, from the extension. Treat files from another agent as untrusted input.
+
+## Limits
+
+`blob_limit` bounds what this Peer sends and accepts; 50 MiB by default. Chunks of one file arrive in order; different files may interleave. A blob that stalls mid-way (the sender went away) completes when the sender is back: the chunks are in its outbox, and resume replays them. Partial data survives a restart of the receiver too.

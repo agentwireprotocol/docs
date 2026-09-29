@@ -1,0 +1,60 @@
+---
+title: Grants and capabilities
+description: Give a peer capabilities beyond the defaults from Go, honor grants, and handle requests.
+---
+
+After the handshake a peer may chat, set states and send files. Anything more (`exec`, `fs:read`, `fs:write`, `admin`, or a string of your own) needs a **grant**: a signed statement from this Peer that a key may use those capabilities until a time. The [concepts page](/concepts/permissions) explains the model; this page is the Go API.
+
+## Granting
+
+```go
+g, err := p.Grant(key, []string{awp.CapFSRead, "deploy:staging"}, time.Hour)
+fmt.Println(g.Hash, g.Expires)
+```
+
+The grant is recorded and sent now, or after the next resume. The peer gets a `GrantReceived` event and holds it; it presents it back on every connection. `p.Caps(key)` is what the peer holds on this Peer right now; `p.Grants()` lists what this Peer issued and holds; `p.Revoke(g.Hash)` stops honoring one (the peer's copy stays valid elsewhere until it expires).
+
+## Honoring
+
+A grant counts if this Peer issued it, or if a key in `Options.Policy.Trust` issued it, or, one level down, if its issuer holds `introduce` from this Peer or a trusted key. The engine applies that; you set the policy:
+
+```go
+awp.Options{
+	Policy: awp.Policy{
+		Accept: awp.AcceptAllowlist,           // or awp.AcceptAny, the spec's default for a sandbox
+		Allow:  []string{"ed25519:..."},       // keys admitted under the allow list
+		Trust:  []string{"ed25519:..."},       // issuers whose grants count as this Peer's own
+		Serve:  []string{awp.CapExec, awp.CapFSRead},
+		Root:   "/srv/repo",
+	},
+}
+```
+
+`Accept` is the admission policy after auth. `Serve` lists the capabilities the engine fulfils by itself when a peer with a matching grant asks: `exec` runs the command, `fs:read` and `fs:write` touch files, all confined to `Root`. Requests for capabilities not in `Serve` reach your program instead.
+
+## Requests
+
+A request is a data part of a `vnd.awp` type in a message. `Message.Requests` lists them, checked against the sender's grants:
+
+```go
+for _, r := range m.Requests {
+	part := m.Parts[r.Part]
+	switch {
+	case !r.Allowed:
+		// answered with err forbidden already
+	case r.Cap == awp.CapExec:
+		var req struct{ Cmd []string `json:"cmd"` }
+		json.Unmarshal(part.Data, &req)
+	}
+}
+```
+
+To make a request of a peer that granted you a capability, send the data part; the [coding-agent profile](https://github.com/agentwireprotocol/awp/blob/main/PROFILE.md) defines the shapes and the result types.
+
+## Introductions
+
+```go
+p.Introduce(to, peer, []string{awp.CapFSRead}, time.Hour, thread)
+```
+
+hands `to` the key and address of `peer` with a grant that `peer` honors if it trusts this Peer with `introduce`. The grant is bound to `peer` (the `aud` extension), so it confers nothing on anyone else. The recipient sees an `Introduced` event and can `Connect` to the address.

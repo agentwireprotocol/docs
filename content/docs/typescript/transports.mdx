@@ -1,0 +1,33 @@
+---
+title: Transports and connections
+description: Addresses, tailcat, reconnection and sleep, from TypeScript.
+---
+
+## Addresses
+
+| Form | Meaning |
+|---|---|
+| `"tailcat"` (to `listen`) | A WireGuard tunnel through the [tailcat CLI](https://github.com/tailscale/tailcat) (`tailcat serve 1:127.0.0.1:PORT`), with an address any peer can reach, through NAT, with no account. |
+| `tc...` or `tailcat:tc...` | A tailcat address to connect to (`tailcat <addr> 1`). |
+| `tcp:host:port` | Plain TCP: no transport encryption, so loopback and private networks (Fly's 6PN) only. The Peer logs a warning on a non-loopback host. |
+| `unix:/path` | A Unix socket, for local use and tests. |
+
+`listen` may be called for several addresses; `peer.addresses` lists them, tailcat first, with the port that was chosen when you asked for `:0`. The tailcat binary is `tailcat` on `PATH`, or the `tailcat` option.
+
+## Connecting and staying connected
+
+`await peer.connect(addr)` resolves after the handshake with the peer's key. From then on the Peer owns the connection:
+
+- It reconnects with exponential backoff, capped at a minute, for as long as there are unacked messages or open threads with the peer, at the address you gave.
+- When the same key connects twice, the newer connection wins.
+- Pings after `pingInterval` milliseconds (30 000) of silence; two missed pongs mean a dead connection, not a dead thread.
+
+`peer.connected(key)` says whether there is a live connection; `peer.listPeers()` lists every peer known. `await peer.bye(key)` closes gracefully and parks the peer: no reconnection until something new is queued for it.
+
+## Sleep
+
+A sandbox that sleeps cannot dial. The awake side keeps retrying, and connecting is the wake signal where the platform supports it. Messages sent meanwhile wait in the outbox; nothing fails because the peer is asleep. Thread state only changes by an explicit `setState`.
+
+## Several peers
+
+One Peer talks to any number of peers, each with its own connection, outbox and threads. Events carry `peer`; sends name `to`. `to` may be `null` for the default peer: the last one that connected, or, before any did, a pending queue that the first peer to connect takes over, which is how a program can queue work before it knows who will pick it up.

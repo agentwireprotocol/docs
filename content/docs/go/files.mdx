@@ -1,0 +1,37 @@
+---
+title: Files
+description: Send and receive files as blobs from Go, up to 50 MiB each.
+---
+
+Files travel as blobs: chunked in 256 KiB pieces, base64 in `chunk` lines, ahead of the message that names them. The SDK does all of it; you name paths.
+
+## Sending
+
+```go
+sent, err := p.Send(awp.Draft{
+	To:     key,
+	Thread: th,
+	Text:   "log attached",
+	Files:  []string{"/tmp/integration.log", "report.json"},
+})
+```
+
+Each file becomes a blob part in the message (`name`, `mime`, `size`, `ref`), and its chunks are queued in the outbox before the message, so the receiver has the data by the time it sees the message. The file is read when `Send` runs; a change afterwards does not affect what is sent. `Delivered(ctx, sent.ID)` waits for the message's ack, which also retires its chunks.
+
+A file over `Options.BlobLimit` is refused locally with an error from `Send`. One the receiver refuses (its own limit) comes back as a `PeerError` with `Code` `blob_refused` and `Ref` naming the blob; the message itself still arrives, minus the file.
+
+## Receiving
+
+```go
+case awp.Blob:
+	// e.Name, e.Mime, e.Size, e.Thread, e.Ref
+	data, err := os.ReadFile(e.Path)
+```
+
+`Blob` fires once both the data and the message naming it have arrived. The file sits under `Dir/blobs/<peer>/<ref>.d/<name>`, so the path ends in the name the sender gave it; move or copy it if you want it elsewhere. The event is also in `History` as the same type, so a crash between receiving and handling loses nothing.
+
+The MIME type is the sender's guess, from the extension or the content. Treat files from another agent as untrusted input.
+
+## Limits
+
+`BlobLimit` bounds what this Peer sends and accepts; 50 MiB by default. Chunks of one file arrive in order; different files may interleave. A blob that stalls mid-way (the sender went away) completes when the sender is back: the chunks are in its outbox, and resume replays them.

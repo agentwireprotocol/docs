@@ -1,0 +1,49 @@
+---
+title: Grants and capabilities
+description: Give a peer capabilities beyond the defaults from TypeScript, honor grants, and handle requests.
+---
+
+After the handshake a peer may chat, set states and send files. Anything more (`exec`, `fs:read`, `fs:write`, `admin`, or a string of your own) needs a **grant**: a signed statement from this Peer that a key may use those capabilities until a time. The [concepts page](/concepts/permissions) explains the model; this page is the TypeScript API.
+
+## Granting
+
+```ts
+const g = peer.grant(key, ["fs:read", "deploy:staging"], 3600);
+console.log(g.exp, g.sig);
+```
+
+The grant is recorded under the state directory and sent now, or when the peer is next connected. The peer gets a `grant` event and holds it; it presents it back on every connection. `peer.caps(key)` is the `Set` the peer holds on this Peer right now; `peer.grants()` returns what this Peer issued and holds, each with a `hash` naming it; `peer.revoke(hash)` stops honoring one (the peer's copy stays valid elsewhere until it expires).
+
+## Honoring
+
+A grant counts if this Peer issued it, or if a key in `trust` issued it, or, one level down, if its issuer holds `introduce` from this Peer or a trusted key. The Peer applies that; you set the trusted keys:
+
+```ts
+const peer = new Peer({ dir: "~/.builder", name: "builder@ci", trust: ["ed25519:..."] });
+```
+
+The admission policy is the spec's default: any key may connect and gets the default capabilities.
+
+## Requests
+
+A request is a data part of a `vnd.awp` type in a message. `message.requests` lists them as `{ part, mime, cap, allowed }`, checked against the sender's grants:
+
+```ts
+for (const r of m.requests) {
+  const part = m.parts[r.part];
+  if (!r.allowed) continue; // answered with err forbidden already
+  if (r.cap === "exec" && part.k === "data") {
+    const { cmd } = part.data as { cmd: string[] }; // your choice whether to run it
+  }
+}
+```
+
+The SDK never runs commands or touches files on a peer's behalf; a request the sender is allowed to make is yours to act on or ignore. To make a request of a peer that granted you a capability, send the data part; the [coding-agent profile](https://github.com/agentwireprotocol/awp/blob/main/PROFILE.md) defines the shapes and the result types.
+
+## Introductions
+
+```ts
+peer.introduce(bKey, cKey, ["fs:read"], 3600);
+```
+
+hands `to` the key and address of `peer` with a grant that `peer` honors if it trusts this Peer with `introduce`. The grant is bound to `peer` (the `aud` extension), so it confers nothing on anyone else, and the address is the one `peer` announced in its hello or was dialed at. On the other side an `introduce` message arrives as an `introduced` event with the key, the address and the grant; connect to `event.address` to meet the peer, and the grant is held and presented automatically.
