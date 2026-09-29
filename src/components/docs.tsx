@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { navigate } from 'astro:transitions/client';
 import { RootProvider } from 'fumadocs-ui/provider/astro';
 import type { AstroProviderProps } from 'fumadocs-core/framework/astro';
-import { BookText, ScrollText } from 'lucide-react';
+import { Braces, Compass } from 'lucide-react';
 import { SiPython, SiTypescript } from '@icons-pack/react-simple-icons';
 import SearchDialog from './search';
 import { Gopher } from './gopher';
@@ -17,8 +17,8 @@ import { PageHeader, type PageHeaderProps } from './page-header';
 // rest, all in the text colour. They live here rather than in the page
 // tree, since React nodes cannot cross the Astro island boundary inside it.
 const sections: Record<string, ReactNode> = {
-  '/': <BookText />,
-  '/reference': <ScrollText />,
+  '/': <Compass />,
+  '/reference': <Braces />,
   '/go': <Gopher />,
   '/python': <SiPython />,
   '/typescript': <SiTypescript />,
@@ -53,7 +53,7 @@ export function Docs({
             return {
               ...option,
               title: <span className="font-semibold text-fd-foreground">{option.title}</span>,
-              icon: <div className="size-full [&_svg]:size-full">{icon}</div>,
+              icon: <div className="flex size-full items-center justify-center [&_svg]:size-5 md:[&_svg]:size-4">{icon}</div>,
             };
           },
         }}
