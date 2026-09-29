@@ -1,10 +1,11 @@
 {
   "title": "Go",
-  "description": "The wire and schema packages of the reference implementation",
+  "description": "The Go SDK, on the reference implementation's engine",
   "icon": "Braces",
   "root": true,
   "pages": [
     "index",
+    "api",
     "wire",
     "schema",
     "peer"

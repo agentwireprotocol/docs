@@ -4,6 +4,7 @@
     "docs",
     "reference",
     "go",
-    "python"
+    "python",
+    "typescript"
   ]
 }

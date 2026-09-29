@@ -1,0 +1,68 @@
+---
+title: API
+description: The Python SDK's Peer and its events.
+---
+
+```python
+import awp
+```
+
+## Peer
+
+```python
+awp.Peer(state_dir=None, *, name=None, about=None, trust=(), ping_interval=30.0,
+         blob_limit=50 * 1024 * 1024, caps=None, tailcat="tailcat")
+```
+
+| Argument | Meaning |
+|---|---|
+| `state_dir` | Where everything durable lives. `None` uses a temporary directory with a fresh identity, removed on close. |
+| `name`, `about` | Sent in hello. `name` defaults to `awp-py@<hostname>`. |
+| `trust` | Keys whose grants are honored as this Peer's own. |
+| `ping_interval` | Seconds idle before a ping; `0` disables pings. |
+| `blob_limit` | The largest blob accepted or sent, in bytes. |
+| `caps` | The hello caps; `chat`, `blob`, `grant`, `introduce` by default. |
+| `tailcat` | The tailcat CLI to run for tailcat addresses. |
+
+Use it as an async context manager, or call `await peer.start()` and `await peer.close()`.
+
+| Method | Does |
+|---|---|
+| `await listen(addr)` | Accepts connections on `tcp:HOST:PORT`, `unix:/path` or `tailcat`; returns the address to share. `addresses` lists them. |
+| `await connect(addr, timeout=30)` | Dials and returns the peer's key after the handshake; keeps dialing with backoff afterwards. |
+| `send(to, text=None, *, thread=None, subject=None, reply_to=None, parts=None, files=())` | Queues a msg; returns `Sent(id, thread, to, new_thread)`. `to=None` means the default peer: the last one connected, or a pending queue that the first peer to connect takes over. |
+| `set_state(to, thread, state, note=None)` | This side's state on a thread. |
+| `await wait_ack(id, timeout=None)` | Waits for the peer's ack. |
+| `grant(to, caps, ttl=3600)` | Mints, records and sends a grant; returns it. `caps(to)` is what the peer holds on this Peer. |
+| `await bye(to, reason="done")` | Closes gracefully and parks the peer. |
+| `connected(to)`, `list_peers()`, `threads(to=None)` | What the Peer knows: `PeerInfo(key, name, about, caps, connected, last_connected)`, `Thread(id, peer, subject, my_state, their_state, closed)`. |
+| `events()`, `await next_event(timeout=None)` | Every event from now on, in order; or the next one. |
+| `key`, `name`, `state_dir`, `addresses` | The identity, the hello name, the directory, the listen addresses. |
+
+`raw_hook` is a callable given every received line as an object, for drivers that want the raw protocol.
+
+## Events
+
+Frozen dataclasses; every one has `peer`, the key of the peer it is about.
+
+| Event | Fields | When |
+|---|---|---|
+| `Connected` | `name`, `caps`, `about`, `outbound` | A handshake completed. |
+| `Disconnected` | `reason` | The connection ended. |
+| `Message` | `id`, `thread`, `parts`, `subject`, `reply_to`, `requests`; `text` | A msg, stored and acked before it is reported. `requests` lists capability requests in the data parts as `Request(part, mime, cap, allowed)`. |
+| `State` | `id`, `thread`, `state`, `note` | The peer set its state. |
+| `Acked` | `id` | The peer acked a msg or state of ours. |
+| `Blob` | `ref`, `path`, `size`, `sha256`, `thread`, `name`, `mime` | A file arrived in full. |
+| `GrantReceived` | `issuer`, `caps`, `expires`, `grant` | A grant to this Peer, now held. |
+| `Introduced` | `key`, `name`, `address`, `thread`, `grant` | Another peer's key and address to connect to. |
+| `PeerError` | `code`, `detail`, `reply_to`, `ref` | An err the peer sent. |
+| `Bye` | `reason` | The peer closed gracefully. |
+| `Error` | `detail` | Something went wrong locally; `peer` is empty. |
+
+## Errors
+
+`awp.AwpError` is the base. `awp.CommandError` is a request the Peer cannot carry out: a bad key, an empty message, a missing file. `awp.StartupError` is a state directory in use or unreadable, or a bad address. `ConnectionError` comes from `connect` on timeout and from `bye` without a connection.
+
+## Lower level
+
+`awp.mint_grant(identity, sub, caps, ttl)` and `awp.verify_grant(grant)` work on grant objects. The modules `awp.wire` (encodings, keys, canonical JSON, ULIDs, timestamps), `awp.store` (the on-disk state) and `awp.connection` (one connection) are importable, with no stability promise before 1.0.

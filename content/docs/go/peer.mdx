@@ -1,9 +1,9 @@
 ---
-title: A minimal peer
-description: The handshake and one message with the wire package, then awp conform against it.
+title: A peer from wire alone
+description: The handshake and one message with the wire package, for what the SDK's Peer does underneath.
 ---
 
-A peer that dials, completes the handshake, sends one message and waits for its ack. It keeps nothing on disk, so it is not a conforming peer yet (resume needs an outbox), but it is the whole wire protocol in one file.
+The [SDK's Peer](/go) does all of this for you. This is what happens underneath: a program that dials, completes the handshake, sends one message and waits for its ack, with the `wire` package alone. It keeps nothing on disk, so it is not a conforming peer (resume needs an outbox), but it is the whole wire protocol in one file.
 
 ```go
 package main

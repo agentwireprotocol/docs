@@ -1,0 +1,65 @@
+---
+title: API
+description: The TypeScript SDK's Peer, its options and its events.
+---
+
+```ts
+import { Peer, type Event } from "@agentwireprotocol/sdk";
+```
+
+## Options
+
+```ts
+new Peer({ dir, name, about, trust, pingInterval, blobLimit, caps, tailcat, log, trace });
+```
+
+| Option | Meaning |
+|---|---|
+| `dir` | Where everything durable lives. Omit it for an ephemeral Peer: a fresh identity, state in memory, removed on close. |
+| `name`, `about` | Sent in hello. `name` defaults to `awp-ts@<hostname>`. |
+| `trust` | Keys whose grants are honored as this Peer's own. |
+| `pingInterval` | Milliseconds idle before a ping; 30 000 by default, `0` disables pings. |
+| `blobLimit` | The largest blob accepted or sent, in bytes; 50 MiB. |
+| `caps` | The hello caps; `chat`, `blob`, `grant`, `introduce` by default. |
+| `tailcat` | The tailcat CLI to run for tailcat addresses. |
+| `log`, `trace` | The log, and every line sent (`"out"`) and received (`"in"`). |
+
+## Peer
+
+| Method | Does |
+|---|---|
+| `listen(addr)` | Accepts connections on `tcp:HOST:PORT`, `unix:/path` or `"tailcat"`; resolves with the address to share. `addresses` lists them. |
+| `connect(addr, timeoutMs = 30000)` | Dials and resolves with the peer's key after the handshake; keeps dialing with backoff afterwards. `null` waits forever. |
+| `send(to, text, { thread, subject, replyTo, parts, files })` | Queues a msg; returns `{ id, thread, to, newThread }`. `to` may be `null` for the default peer. |
+| `setState(to, thread, state, note)` | This side's state on a thread. |
+| `waitAck(id, timeoutMs)` | Resolves once the peer acks the message. |
+| `grant(to, caps, ttl = 3600)` | Mints, records and sends a grant; returns it. `caps(to)` is the set the peer holds on this Peer. |
+| `bye(to, reason = "done")` | Closes gracefully and parks the peer. |
+| `connected(to)`, `listPeers()`, `threads(to?)` | What the Peer knows. |
+| `events()`, `nextEvent(timeoutMs)` | Every event from now on, as an async iterator; or the next one. |
+| `close()` | Stops everything without a bye. |
+| `key`, `name`, `dir`, `addresses` | The identity, the hello name, the directory, the listen addresses. |
+
+`rawHook` receives every received line as an object, for drivers that want the raw protocol.
+
+## Events
+
+A discriminated union on `type`; every event has `peer`, the key of the peer it is about.
+
+| `type` | Fields | When |
+|---|---|---|
+| `connected` | `name`, `about`, `caps`, `outbound` | A handshake completed. |
+| `disconnected` | `reason` | The connection ended. |
+| `message` | `id`, `thread`, `parts`, `subject`, `replyTo`, `requests`, `text` | A msg, stored and acked before it is reported. `requests` lists capability requests in the data parts as `{ part, mime, cap, allowed }`. |
+| `state` | `id`, `thread`, `state`, `note` | The peer set its state. |
+| `acked` | `id` | The peer acked a msg or state of ours. |
+| `blob` | `ref`, `path`, `size`, `sha256`, `thread`, `name`, `mime` | A file arrived in full. |
+| `grant` | `issuer`, `caps`, `expires`, `grant` | A grant to this Peer, now held. |
+| `introduced` | `key`, `name`, `address`, `thread`, `grant` | Another peer's key and address to connect to. |
+| `error` | `code`, `detail`, `replyTo`, `ref` | An err the peer sent. |
+| `bye` | `reason` | The peer closed gracefully. |
+| `local-error` | `detail` | Something went wrong locally; `peer` is empty. |
+
+## Lower level
+
+`Identity`, `mintGrant`, `verifyGrant`, `canonical`, `formatKey`, `parseKey` and `parseAddr` are exported for anything below the Peer. The `wire` namespace holds the message types generated from the schema: `wire.Hello`, `wire.Msg`, `wire.Part`, `wire.Grant` and the rest.

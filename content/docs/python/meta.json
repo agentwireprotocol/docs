@@ -1,10 +1,11 @@
 {
   "title": "Python",
-  "description": "awp_peer.py, the independent single-file peer",
+  "description": "The Python SDK: an asyncio Peer, no dependencies",
   "icon": "SquareTerminal",
   "root": true,
   "pages": [
     "index",
-    "commands"
+    "api",
+    "driver"
   ]
 }

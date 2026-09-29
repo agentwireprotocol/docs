@@ -92,6 +92,7 @@
   --reference-color: var(--green);
   --go-color: oklch(0.62 0.13 220);
   --python-color: var(--orange);
+  --typescript-color: oklch(0.55 0.16 262);
 
   --color-fd-background: var(--page);
   --color-fd-foreground: var(--ink);

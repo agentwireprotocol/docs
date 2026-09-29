@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { navigate } from 'astro:transitions/client';
 import { RootProvider } from 'fumadocs-ui/provider/astro';
 import type { AstroProviderProps } from 'fumadocs-core/framework/astro';
-import { BookOpen, Braces, Library, SquareTerminal } from 'lucide-react';
+import { BookOpen, Braces, FileCode, Library, SquareTerminal } from 'lucide-react';
 import SearchDialog from './search';
 import { Logo } from './logo';
 import { PageHeader, type PageHeaderProps } from './page-header';
@@ -18,6 +18,7 @@ const sections: Record<string, { icon: ReactNode; color: string }> = {
   '/reference': { icon: <Library />, color: 'var(--reference-color)' },
   '/go': { icon: <Braces />, color: 'var(--go-color)' },
   '/python': { icon: <SquareTerminal />, color: 'var(--python-color)' },
+  '/typescript': { icon: <FileCode />, color: 'var(--typescript-color)' },
 };
 
 export const repoUrl = 'https://github.com/agentwireprotocol/awp';

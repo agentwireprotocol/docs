@@ -1,24 +1,76 @@
 ---
-title: Go
-description: The reference implementation is a Go module. Its wire and schema packages are importable by any Go peer.
+title: Go SDK
+description: A Peer that listens, connects, sends and receives, built on the reference implementation's engine.
 ---
 
-The reference implementation lives at [`github.com/agentwireprotocol/awp`](https://github.com/agentwireprotocol/awp). Two of its packages are public API for writing your own peer; the daemon, the store and the transports are internal.
+The Go SDK is [`github.com/agentwireprotocol/go-sdk`](https://github.com/agentwireprotocol/go-sdk), package `awp`. It is built on the engine of the reference implementation, so a `Peer` behaves exactly like the `awp` daemon: resume with an outbox on disk, acks, dedup by id, blobs in chunks, grants and introductions, ping/pong, reconnection with backoff, and tailcat as the transport that reaches anywhere.
 
 ```bash
-go get github.com/agentwireprotocol/awp@latest
+go get github.com/agentwireprotocol/go-sdk
+```
+
+## A peer in a few lines
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/agentwireprotocol/go-sdk/awp"
+)
+
+func main() {
+	p, err := awp.New(awp.Options{
+		Dir:    "/var/lib/mybot",    // identity, outbox, threads, blobs
+		Name:   "mybot@builder",
+		Listen: []string{"tailcat"}, // or "tcp:127.0.0.1:7000", "unix:/tmp/awp.sock"
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer p.Close()
+
+	ctx := context.Background()
+	key, err := p.Connect(ctx, "tc...") // an address shared out of band
+	if err != nil {
+		log.Fatal(err)
+	}
+	p.Send(awp.Draft{To: key, Subject: "Run the suite", Text: "Please run make test at a1b2c3."})
+
+	for ev := range p.Events(ctx) {
+		switch e := ev.(type) {
+		case awp.Message:
+			fmt.Printf("%s: %s\n", e.Peer, e.Text())
+		case awp.StateChanged:
+			fmt.Printf("%s is %s in %s\n", e.Peer, e.State, e.Thread)
+		case awp.Blob:
+			fmt.Printf("file %s at %s\n", e.Name, e.Path)
+		}
+	}
+}
 ```
 
 <Cards>
+  <Card title="API" href="/go/api">
+    Options, the Peer's methods, and every event with its fields.
+  </Card>
   <Card title="wire" href="/go/wire">
-    Framing, the envelope, every message type, ids, keys, the auth signature, canonical JSON, grants and presence.
+    The wire format as Go types, for anything below the Peer.
   </Card>
   <Card title="schema" href="/go/schema">
-    The embedded JSON Schema, and a validator for lines and objects.
-  </Card>
-  <Card title="A minimal peer" href="/go/peer">
-    The handshake and a message in sixty lines, then `awp conform` against it.
+    The embedded JSON Schema and a validator for lines.
   </Card>
 </Cards>
 
-The `wire` package is also the source the [JSON Schema](/reference/schema) is generated from: its types, tags and comments are the schema. Go 1.27 or later.
+## How it fits
+
+`New` opens the state directory (or a temporary one), loads or creates the Ed25519 identity, and starts listening and reconnecting. `Connect` dials an address and returns the peer's key once the handshake is done; the engine keeps the connection and reconnects with exponential backoff, capped at a minute, for as long as there are unacked messages or open threads. `Send` never fails because the peer is away: the message is on disk and goes out on the next resume, and `Delivered` waits for the ack. `Events` delivers what happens, in order, with nothing lost to a slow consumer.
+
+The wire types, framing and cryptography are the reference implementation's [`wire`](/go/wire) package, which is also what the [JSON Schema](/reference/schema) is generated from. `Peer.Node()` exposes the engine for what the SDK does not cover, such as presence and conversation sharing.
+
+## Conformance
+
+`go test ./...` in the SDK's repository runs the protocol's [conformance suite](/reference/conformance) against a `Peer` in-process, along with a two-peer conversation, queued delivery across a restart and blob transfer. Every line a `Peer` sends validates against the schema.
