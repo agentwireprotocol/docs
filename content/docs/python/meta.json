@@ -1,0 +1,10 @@
+{
+  "title": "Python",
+  "description": "awp_peer.py, the independent single-file peer",
+  "icon": "SquareTerminal",
+  "root": true,
+  "pages": [
+    "index",
+    "commands"
+  ]
+}

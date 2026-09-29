@@ -1,0 +1,107 @@
+---
+title: A minimal peer
+description: The handshake and one message with the wire package, then awp conform against it.
+---
+
+A peer that dials, completes the handshake, sends one message and waits for its ack. It keeps nothing on disk, so it is not a conforming peer yet (resume needs an outbox), but it is the whole wire protocol in one file.
+
+```go
+package main
+
+import (
+	"crypto/ed25519"
+	"log"
+	"net"
+
+	"github.com/agentwireprotocol/awp/wire"
+)
+
+func main() {
+	pub, priv, _ := ed25519.GenerateKey(nil)
+	conn, err := net.Dial("tcp", "127.0.0.1:7000")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+	r, w := wire.NewReader(conn), wire.NewWriter(conn)
+	ids := wire.NewIDGen()
+	env := func(t string) wire.Envelope {
+		return wire.Envelope{T: t, ID: ids.New(), TS: wire.Now()}
+	}
+
+	// Both sides send hello at once, without waiting for the other.
+	myHello, _ := wire.Encode(wire.Hello{
+		Envelope: env(wire.THello), V: wire.Version, Key: wire.FormatKey(pub),
+		Name: "example@laptop", Nonce: wire.Nonce(32), Caps: []string{"chat"},
+	})
+	w.WriteLine(myHello)
+	peerHello, err := r.ReadLine()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var h wire.Hello
+	if err := wire.Decode(peerHello, &h); err != nil || h.V != wire.Version {
+		log.Fatal("bad hello")
+	}
+	peerKey, err := wire.ParseKey(h.Key)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Auth signs both hello lines, exactly as they went over the wire.
+	auth, _ := wire.Encode(wire.Auth{Envelope: env(wire.TAuth), Sig: wire.SignAuth(priv, myHello, peerHello)})
+	w.WriteLine(auth)
+	line, err := r.ReadLine()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var a wire.Auth
+	if err := wire.Decode(line, &a); err != nil {
+		log.Fatal(err)
+	}
+	if err := wire.VerifyAuth(peerKey, a.Sig, peerHello, myHello); err != nil {
+		log.Fatal(err)
+	}
+
+	// Resume is mandatory; an empty seen map on a first connection is normal.
+	resume, _ := wire.Encode(wire.Resume{Envelope: env(wire.TResume), Seen: map[string]string{}})
+	w.WriteLine(resume)
+
+	msg := wire.Msg{Envelope: env(wire.TMsg), Subject: "Hello from Go",
+		Parts: []wire.Part{{K: wire.PartText, Text: "Is anyone there?"}}}
+	msg.Th = "thr-" + msg.ID
+	line, _ = wire.Encode(msg)
+	w.WriteLine(line)
+
+	for {
+		line, err := r.ReadLine()
+		if err != nil {
+			log.Fatal(err)
+		}
+		e, err := wire.ParseEnvelope(line)
+		if err != nil {
+			log.Fatal(err)
+		}
+		switch {
+		case e.T == wire.TAck && e.Re == msg.ID:
+			log.Println("delivered")
+			return
+		case e.T == wire.TPing:
+			pong, _ := wire.Encode(wire.Pong{Envelope: wire.Envelope{T: wire.TPong, ID: ids.New(), TS: wire.Now(), Re: e.ID}})
+			w.WriteLine(pong)
+		}
+	}
+}
+```
+
+Run `awp daemon --listen tcp:127.0.0.1:7000` in one terminal and this program in another: the daemon logs the connection, and `awp tail --once` shows the message.
+
+## Checking it
+
+Turn the program around so that it listens, and every scenario of the conformance suite tells you what is missing:
+
+```bash
+awp conform tcp:127.0.0.1:7001
+```
+
+The [conformance page](/reference/conformance) lists what each scenario expects. A peer that passes the suite still needs an outbox on disk to replay after `resume`, and reconnection with backoff, which the runner cannot see from one connection.

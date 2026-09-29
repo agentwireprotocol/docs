@@ -1,0 +1,53 @@
+---
+title: Commands and events
+description: What awp_peer.py reads on stdin and writes on stdout.
+---
+
+One JSON object per line in each direction. Events are flushed as they happen. Logs go to stderr only.
+
+## Commands (stdin)
+
+| Command | Fields | Does |
+|---|---|---|
+| `send` | `th`, `text`, optional `subject`, `re`, `parts` | sends a `msg` in thread `th`; `parts` appends raw code, data or blob parts after the text part |
+| `state` | `th`, `state`, optional `note` | sends a `state` for the thread |
+| `blob` | `th`, `path`, optional `text` | sends the file as chunks, then a `msg` with a blob part |
+| `grant` | `sub`, `caps`, `ttl` | mints a grant to `sub` (a key) for `caps`, valid `ttl` seconds, and sends it in a `grant` message |
+| `bye` | optional `reason` | closes the connection gracefully |
+| `quit` | | exits at once, without a bye |
+
+Any command may add `"peer":"ed25519:..."` to pick the target when more than one peer is connected; otherwise the default peer is the one that last authenticated. Commands issued before any peer ever connected are queued and delivered on the first connection. Closing stdin does not stop the peer; it runs until killed.
+
+```json
+{"cmd":"send","th":"t1","subject":"Run the suite","text":"Please run make integration."}
+{"cmd":"state","th":"t1","state":"waiting","note":"need the branch name"}
+{"cmd":"blob","th":"t1","path":"/tmp/test-output.log","text":"log attached"}
+{"cmd":"grant","sub":"ed25519:6EPXkq2TFR8tWi49c2x809PIBLePjuGFm-CQqb859bw","caps":["fs:read"],"ttl":3600}
+{"cmd":"bye","reason":"done"}
+```
+
+## Events (stdout)
+
+| Event | Fields | When |
+|---|---|---|
+| `identity` | `key`, `name` | at start |
+| `listening` | `addr`, `key` | the listener is up |
+| `connected` | `key`, `name`, `caps`, `about` | a handshake completed |
+| `recv` | `msg` | a message arrived: the line as an object, `t` says which |
+| `sent` | `id`, `t` | a command's message went out |
+| `acked` | `id` | the peer acked a message of ours |
+| `blob` | `ref`, `path`, `size`, `sha256` | a blob was received in full and written to `path` |
+| `disconnected` | `reason` | the connection ended |
+| `error` | `detail` | a command was refused, or something went wrong |
+
+`recv` carries every message the peer takes as input, chunks included (without their data), so a driver can watch the whole conversation.
+
+```json
+{"event":"recv","msg":{"t":"msg","id":"01M3NA0JGVBC89EAGW9YVS3SXP","ts":"2026-09-29T00:46:08.411Z","th":"t1","subject":"Run the suite","parts":[{"k":"text","text":"Please run make integration."}]}}
+{"event":"acked","id":"01M3NA0K28VDXVSW0EZRFPG531"}
+{"event":"blob","ref":"blob_44","path":"/home/me/.awp-py/blobs/df26.../blob_44","size":183422,"sha256":"73cf..."}
+```
+
+## Driving it from a test
+
+The Go/Python interop tests in the repository are the worked example: they start the peer as a subprocess, write commands, and read events until the one they wait for appears. The same loop in any language is a few dozen lines.

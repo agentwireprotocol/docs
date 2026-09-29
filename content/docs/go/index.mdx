@@ -1,0 +1,24 @@
+---
+title: Go
+description: The reference implementation is a Go module. Its wire and schema packages are importable by any Go peer.
+---
+
+The reference implementation lives at [`github.com/agentwireprotocol/awp`](https://github.com/agentwireprotocol/awp). Two of its packages are public API for writing your own peer; the daemon, the store and the transports are internal.
+
+```bash
+go get github.com/agentwireprotocol/awp@latest
+```
+
+<Cards>
+  <Card title="wire" href="/go/wire">
+    Framing, the envelope, every message type, ids, keys, the auth signature, canonical JSON, grants and presence.
+  </Card>
+  <Card title="schema" href="/go/schema">
+    The embedded JSON Schema, and a validator for lines and objects.
+  </Card>
+  <Card title="A minimal peer" href="/go/peer">
+    The handshake and a message in sixty lines, then `awp conform` against it.
+  </Card>
+</Cards>
+
+The `wire` package is also the source the [JSON Schema](/reference/schema) is generated from: its types, tags and comments are the schema. Go 1.27 or later.

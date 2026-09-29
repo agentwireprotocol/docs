@@ -1,6 +1,7 @@
 {
   "title": "Reference",
   "description": "Commands, environment, hooks, the protocol and its schema",
+  "icon": "Library",
   "root": true,
   "pages": [
     "index",

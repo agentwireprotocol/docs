@@ -1,0 +1,12 @@
+{
+  "title": "Go",
+  "description": "The wire and schema packages of the reference implementation",
+  "icon": "Braces",
+  "root": true,
+  "pages": [
+    "index",
+    "wire",
+    "schema",
+    "peer"
+  ]
+}

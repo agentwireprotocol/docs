@@ -1,0 +1,35 @@
+---
+title: schema
+description: The embedded JSON Schema and a validator for lines and objects.
+---
+
+```go
+import "github.com/agentwireprotocol/awp/schema"
+```
+
+`schema.V0` is the JSON Schema document itself, the same bytes as [`schema/v0/awp.schema.json`](https://agentwireprotocol.com/schema/v0/awp.schema.json), and `schema.ID` its `$id`. The package compiles it once and validates against it.
+
+```go
+v, err := schema.Default()
+
+// One line as it travels: the type selects the message definition.
+if err := v.Line(line); err != nil {
+    if errors.Is(err, schema.ErrUnknownType) {
+        // A type the schema does not know. The envelope was still checked;
+        // receivers ignore such lines (section 5), so treat this as a note.
+    }
+    // Otherwise: which fields are wrong, and where. For example
+    // "msg: /parts/0: missing property 'text'".
+}
+
+// An object carried inside a message.
+err = v.Object("Grant", grantRaw)
+err = v.Object("Presence", presenceDoc)
+
+// Any definition, compiled on demand.
+s, err := v.Def("Hello")
+```
+
+Formats are asserted, so a `ts` that is not RFC 3339 fails. Unknown fields pass everywhere, since no object in the schema is closed.
+
+`schema.New(doc)` compiles another document, for a schema you have edited or a future version. The conformance runner uses `Line` on every line it receives; the reference implementation's tests use it on every example in the specification and on one of every message the `wire` package encodes.

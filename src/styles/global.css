@@ -87,6 +87,12 @@
 :root,
 .dark,
 .dark #nd-sidebar {
+  /* One colour per section tab (src/components/docs.tsx). */
+  --docs-color: var(--accent);
+  --reference-color: var(--green);
+  --go-color: oklch(0.62 0.13 220);
+  --python-color: var(--orange);
+
   --color-fd-background: var(--page);
   --color-fd-foreground: var(--ink);
   --color-fd-muted: var(--field);

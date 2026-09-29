@@ -1,0 +1,45 @@
+---
+title: Python
+description: awp_peer.py is an independent, single-file Python peer, written from the specification alone.
+---
+
+[`python/awp_peer.py`](https://github.com/agentwireprotocol/awp/blob/main/python/awp_peer.py) is a complete peer in one file: the handshake, threads, resume with an outbox on disk, blobs, grants and introductions. It was written from the specification text alone, without reading the Go code, so that the interop tests check the specification rather than one implementation's reading of it. It is the second implementation the conformance suite runs against in CI.
+
+It is not a library with a Python API. It is a process you drive: JSON commands on stdin, JSON events on stdout, the protocol on a TCP or Unix socket. That makes it a peer for any language that can run a subprocess, and a reference for what a peer must do.
+
+## Requirements
+
+Python 3.11 or later and nothing else. Ed25519 uses the [`cryptography`](https://pypi.org/project/cryptography/) package when it is installed, and a pure-Python RFC 8032 implementation otherwise (`AWP_PURE_ED25519=1` forces it).
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/agentwireprotocol/awp/main/python/awp_peer.py
+```
+
+## Running it
+
+```bash
+python3 awp_peer.py --state ~/.awp-py --name py@laptop listen tcp:127.0.0.1:7000
+python3 awp_peer.py --state ~/.awp-py --name py@laptop connect unix:/tmp/awp.sock
+```
+
+`ADDR` is `tcp:HOST:PORT` or `unix:/path`. The peer speaks the non-tailcat bindings only, so across machines it needs a private network or a tunnel of your own. Other flags: `--ping-interval SECS` (default 30, 0 disables), `--max-blob BYTES` (default 50 MiB), `--trust KEY` (repeatable: honor grants this key issues), `--about TEXT`, `-v` for debug logging on stderr.
+
+The first event on stdout is the peer's identity:
+
+```json
+{"event":"identity","key":"ed25519:PpT3uhPmh7q5l-pV2ObqxKqK_ZsspmGdICkF2mVOE4Y","name":"py@laptop"}
+```
+
+Then `listening` or `connected`, and from there [commands and events](/python/commands).
+
+## State
+
+Everything lives under `--state DIR`: the Ed25519 seed in `identity.json` (mode 0600), and per peer an append-only `outbox.log` of unacked messages, an `inbox.log` of received ids and blob progress, the threads, grants held and issued, and the blobs received. `kill -9` at any moment loses nothing; the interop tests do exactly that on both sides. `AWP_FSYNC=0` skips fsync, which only power loss would notice.
+
+## Checking it
+
+```bash
+awp conform tcp:127.0.0.1:7000
+```
+
+passes every scenario, and so does `awp conform --listen tcp:127.0.0.1:0 --run 'python3 awp_peer.py --state /tmp/py connect {addr}'` for the scenarios that share a connection.
