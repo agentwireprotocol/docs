@@ -12,7 +12,7 @@ const g = peer.grant(key, ["fs:read", "deploy:staging"], 3600);
 console.log(g.exp, g.sig);
 ```
 
-The grant is recorded under the state directory and sent now, or when the peer is next connected. The peer gets a `grant` event and holds it; it presents it back on every connection. `peer.caps(key)` is the `Set` the peer holds on this Peer right now. Grants expire at `exp`; there is no revocation before that in this SDK yet.
+The grant is recorded under the state directory and sent now, or when the peer is next connected. The peer gets a `grant` event and holds it; it presents it back on every connection. `peer.caps(key)` is the `Set` the peer holds on this Peer right now; `peer.grants()` returns what this Peer issued and holds, each with a `hash` naming it; `peer.revoke(hash)` stops honoring one (the peer's copy stays valid elsewhere until it expires).
 
 ## Honoring
 
@@ -42,6 +42,8 @@ The SDK never runs commands or touches files on a peer's behalf; a request the s
 
 ## Introductions
 
-An `introduce` message from a peer arrives as an `introduced` event with the other peer's key and address, and a grant that peer honors if it trusts the introducer. Connect to `event.address` to meet it; the grant is held and presented automatically.
+```ts
+peer.introduce(bKey, cKey, ["fs:read"], 3600);
+```
 
-Sending introductions is not in the TypeScript SDK yet.
+hands `to` the key and address of `peer` with a grant that `peer` honors if it trusts this Peer with `introduce`. The grant is bound to `peer` (the `aud` extension), so it confers nothing on anyone else, and the address is the one `peer` announced in its hello or was dialed at. On the other side an `introduce` message arrives as an `introduced` event with the key, the address and the grant; connect to `event.address` to meet the peer, and the grant is held and presented automatically.

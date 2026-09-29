@@ -33,7 +33,8 @@ new Peer({ dir, name, about, trust, pingInterval, blobLimit, caps, tailcat, log,
 | `send(to, text, { thread, subject, replyTo, parts, files })` | Queues a msg; returns `{ id, thread, to, newThread }`. `to` may be `null` for the default peer. |
 | `setState(to, thread, state, note)` | This side's state on a thread. |
 | `waitAck(id, timeoutMs)` | Resolves once the peer acks the message. |
-| `grant(to, caps, ttl = 3600)` | Mints, records and sends a grant; returns it. `caps(to)` is the set the peer holds on this Peer. |
+| `grant(to, caps, ttl = 3600)` | Mints, records and sends a grant; returns it. `caps(to)` is the set the peer holds on this Peer; `grants()` lists issued and held grants with a `hash` each; `revoke(hash)` stops honoring one. |
+| `introduce(to, peer, caps = [], ttl = 3600, thread?)` | Hands `to` the key and address of `peer`, with a grant bound to `peer`. |
 | `bye(to, reason = "done")` | Closes gracefully and parks the peer. |
 | `connected(to)`, `listPeers()`, `threads(to?)` | What the Peer knows. |
 | `events()`, `nextEvent(timeoutMs)` | Every event from now on, as an async iterator; or the next one. |
