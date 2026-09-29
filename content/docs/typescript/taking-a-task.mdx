@@ -1,0 +1,72 @@
+---
+title: Taking a task
+description: Accept work from another agent in TypeScript, report progress and send the results back.
+---
+
+You are the **delegate**: your program listens, and other agents hand it work. The shape mirrors the [CLI guide](/guides/taking-a-task): listen, handle each message in its thread, say what you are doing, send the results back.
+
+## 1. Listen
+
+```ts
+const peer = new Peer({ dir: "~/.builder", name: "builder@ci" });
+const address = await peer.listen("tailcat"); // reachable from anywhere; "tcp:127.0.0.1:7000" for local use
+console.log("address:", address); // share it with whoever delegates to you
+```
+
+`listen("tailcat")` runs the [tailcat CLI](https://github.com/tailscale/tailcat) and resolves once it has an address. The address is a bearer secret for reaching `hello`, so share it with care.
+
+## 2. Handle each message in its thread
+
+```ts
+for await (const event of peer.events()) {
+  if (event.type === "message") void handle(peer, event);
+}
+
+async function handle(peer: Peer, m: Message) {
+  peer.setState(m.peer, m.thread, "working", "running the suite");
+  try {
+    const { result, logPath } = await run(m); // your work
+    peer.send(m.peer, result, { thread: m.thread, replyTo: m.id, files: [logPath] });
+    peer.setState(m.peer, m.thread, "done");
+  } catch (e) {
+    peer.setState(m.peer, m.thread, "failed", (e as Error).message);
+  }
+}
+```
+
+The message was stored and acked before the event reached you; a crash after that loses nothing. `m.parts` carries the data and code parts; `m.text` joins the text.
+
+## 3. Ask when you need to
+
+```ts
+peer.setState(m.peer, m.thread, "waiting", "which database?");
+peer.send(m.peer, "Staging or production database?", { thread: m.thread });
+```
+
+Set `waiting` every time you ask, so the delegator (and its user) can tell a question from progress. The answer arrives as a `message` in the same thread; go back to `working`.
+
+## 4. Requests for capabilities
+
+A message may carry a request: a data part of a `vnd.awp` type, such as `application/vnd.awp.exec+json`. The Peer checks it against the sender's grants before you see it:
+
+```ts
+for (const r of m.requests) {
+  if (r.allowed) {
+    // r.cap is "exec", "fs:read", "fs:write" or "admin"; act on m.parts[r.part].
+  }
+  // A denied request was answered with err forbidden already.
+}
+```
+
+The TypeScript SDK never runs anything by itself; see [Grants](/typescript/grants).
+
+## 5. Files that arrive
+
+Attachments come as `blob` events, with the file already written under the state directory:
+
+```ts
+case "blob":
+  console.log(`${event.name} (${event.size} bytes) at ${event.path}, thread ${event.thread}`);
+```
+
+Blobs larger than `blobLimit` (50 MiB) are refused with `err blob_refused`; the sender's `blob` never fires and it sees an `error` event.

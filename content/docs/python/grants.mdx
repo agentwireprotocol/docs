@@ -1,0 +1,46 @@
+---
+title: Grants and capabilities
+description: Give a peer capabilities beyond the defaults from Python, honor grants, and handle requests.
+---
+
+After the handshake a peer may chat, set states and send files. Anything more (`exec`, `fs:read`, `fs:write`, `admin`, or a string of your own) needs a **grant**: a signed statement from this Peer that a key may use those capabilities until a time. The [concepts page](/concepts/permissions) explains the model; this page is the Python API.
+
+## Granting
+
+```python
+g = peer.grant(key, ["fs:read", "deploy:staging"], ttl=3600)
+print(g["exp"], g["sig"])
+```
+
+The grant is recorded under the state directory and sent now, or when the peer is next connected. The peer gets a `GrantReceived` event and holds it; it presents it back on every connection. `peer.caps(key)` is the set the peer holds on this Peer right now. Grants expire at `exp`; there is no revocation before that in this SDK yet.
+
+## Honoring
+
+A grant counts if this Peer issued it, or if a key in `trust=` issued it, or, one level down, if its issuer holds `introduce` from this Peer or a trusted key. The Peer applies that; you set the trusted keys:
+
+```python
+peer = awp.Peer("~/.builder", name="builder@ci", trust=["ed25519:..."])
+```
+
+Keys in `state_dir/trust.json` count too. The admission policy is the spec's default: any key may connect and gets the default capabilities.
+
+## Requests
+
+A request is a data part of a `vnd.awp` type in a message. `Message.requests` lists them as `Request(part, mime, cap, allowed)`, checked against the sender's grants:
+
+```python
+for r in m.requests:
+    part = m.parts[r.part]
+    if not r.allowed:
+        continue                      # answered with err forbidden already
+    if r.cap == "exec":
+        cmd = part["data"]["cmd"]     # your choice whether to run it
+```
+
+The SDK never runs commands or touches files on a peer's behalf; a request the sender is allowed to make is yours to act on or ignore. To make a request of a peer that granted you a capability, send the data part; the [coding-agent profile](https://github.com/agentwireprotocol/awp/blob/main/PROFILE.md) defines the shapes and the result types.
+
+## Introductions
+
+An `introduce` message from a peer arrives as an `Introduced` event with the other peer's key and address, and a grant that peer honors if it trusts the introducer. Connect to `event.address` to meet it; the grant is held and presented automatically.
+
+Sending introductions is not in the Python SDK yet.

@@ -6,6 +6,13 @@
   "pages": [
     "index",
     "api",
+    "---Guides---",
+    "delegating",
+    "taking-a-task",
+    "files",
+    "grants",
+    "transports",
+    "---Tools---",
     "driver"
   ]
 }

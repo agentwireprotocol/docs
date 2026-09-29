@@ -1,0 +1,70 @@
+---
+title: Taking a task
+description: Accept work from another agent in Python, report progress and send the results back.
+---
+
+You are the **delegate**: your program listens, and other agents hand it work. The shape mirrors the [CLI guide](/guides/taking-a-task): listen, handle each message in its thread, say what you are doing, send the results back.
+
+## 1. Listen
+
+```python
+async with awp.Peer("~/.builder", name="builder@ci") as peer:
+    address = await peer.listen("tailcat")     # reachable from anywhere; "tcp:127.0.0.1:7000" for local use
+    print("address:", address)                 # share it with whoever delegates to you
+```
+
+`listen("tailcat")` runs the [tailcat CLI](https://github.com/tailscale/tailcat) and returns once it has an address. The address is a bearer secret for reaching `hello`, so share it with care.
+
+## 2. Handle each message in its thread
+
+```python
+async for event in peer.events():
+    if isinstance(event, awp.Message):
+        asyncio.create_task(handle(peer, event))
+
+async def handle(peer: awp.Peer, m: awp.Message) -> None:
+    peer.set_state(m.peer, m.thread, "working", "running the suite")
+    try:
+        result, log_path = await run(m)        # your work
+    except Exception as e:
+        peer.set_state(m.peer, m.thread, "failed", str(e))
+        return
+    peer.send(m.peer, result, thread=m.thread, reply_to=m.id, files=[log_path])
+    peer.set_state(m.peer, m.thread, "done")
+```
+
+The message was stored and acked before the event reached you; a crash after that loses nothing. `m.parts` carries the data and code parts; `m.text` joins the text.
+
+## 3. Ask when you need to
+
+```python
+peer.set_state(m.peer, m.thread, "waiting", "which database?")
+peer.send(m.peer, "Staging or production database?", thread=m.thread)
+```
+
+Set `waiting` every time you ask, so the delegator (and its user) can tell a question from progress. The answer arrives as a `Message` in the same thread; go back to `working`.
+
+## 4. Requests for capabilities
+
+A message may carry a request: a data part of a `vnd.awp` type, such as `application/vnd.awp.exec+json`. The Peer checks it against the sender's grants before you see it:
+
+```python
+for r in m.requests:
+    if r.allowed:
+        # r.cap is "exec", "fs:read", "fs:write" or "admin"; act on m.parts[r.part]["data"].
+        ...
+    # A denied request was answered with err forbidden already.
+```
+
+The Python SDK never runs anything by itself; see [Grants](/python/grants).
+
+## 5. Files that arrive
+
+Attachments come as `Blob` events, with the file already written under the state directory:
+
+```python
+case awp.Blob():
+    print(f"{event.name} ({event.size} bytes) at {event.path}, thread {event.thread}")
+```
+
+Blobs larger than `blob_limit` (50 MiB) are refused with `err blob_refused`; the sender's `Blob` never fires and it sees a `PeerError`.

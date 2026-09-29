@@ -1,0 +1,84 @@
+---
+title: Taking a task
+description: Accept work from another agent in Go, report progress and send the results back.
+---
+
+You are the **delegate**: your program listens, and other agents hand it work. The shape mirrors the [CLI guide](/guides/taking-a-task): listen, handle each message in its thread, say what you are doing, send the results back.
+
+## 1. Listen
+
+```go
+p, err := awp.New(awp.Options{
+	Dir:    "/var/lib/builder",
+	Name:   "builder@ci",
+	Listen: []string{"tailcat"}, // reachable from anywhere; "tcp:127.0.0.1:7000" for local use
+})
+if err != nil {
+	log.Fatal(err)
+}
+defer p.Close()
+addr, _ := p.TailcatAddress()
+fmt.Println("address:", addr) // share it with whoever delegates to you
+```
+
+A tailcat listener takes a few seconds; `TailcatAddress` says why it is missing until then. The address is a bearer secret for reaching `hello`, so share it with care.
+
+## 2. Handle each message in its thread
+
+```go
+for ev := range p.Events(ctx) {
+	m, ok := ev.(awp.Message)
+	if !ok {
+		continue
+	}
+	go handle(p, m)
+}
+
+func handle(p *awp.Peer, m awp.Message) {
+	p.SetState(m.Peer, m.Thread, awp.StateWorking, "running the suite")
+	result, logPath, err := run(m) // your work
+	if err != nil {
+		p.SetState(m.Peer, m.Thread, awp.StateFailed, err.Error())
+		return
+	}
+	p.Send(awp.Draft{To: m.Peer, Thread: m.Thread, ReplyTo: m.ID, Text: result, Files: []string{logPath}})
+	p.SetState(m.Peer, m.Thread, awp.StateDone, "")
+}
+```
+
+The message was stored and acked before the event reached you; a crash after that loses nothing, and `History` has it. `m.Parts` carries the data and code parts; `m.Text()` joins the text.
+
+## 3. Ask when you need to
+
+```go
+p.SetState(m.Peer, m.Thread, awp.StateWaiting, "which database?")
+p.Send(awp.Draft{To: m.Peer, Thread: m.Thread, Text: "Staging or production database?"})
+```
+
+Set `waiting` every time you ask, so the delegator (and its user) can tell a question from progress. The answer arrives as a `Message` in the same thread; go back to `working`.
+
+## 4. Requests for capabilities
+
+A message may carry a request: a data part of a `vnd.awp` type, such as `application/vnd.awp.exec+json`. The engine checks it against the sender's grants before you see it:
+
+```go
+for _, r := range m.Requests {
+	if r.Allowed {
+		// r.Cap is "exec", "fs:read", "fs:write" or "admin"; act on m.Parts[r.Part].Data.
+	}
+	// A denied request was answered with err forbidden already.
+}
+```
+
+`Options.Policy.Serve` lets the engine fulfil `exec`, `fs:read` and `fs:write` by itself, confined to `Policy.Root`; see [Grants](/go/grants).
+
+## 5. Files that arrive
+
+Attachments come as `Blob` events, with the file already written under the state directory:
+
+```go
+case awp.Blob:
+	fmt.Printf("%s (%d bytes) at %s, thread %s\n", e.Name, e.Size, e.Path, e.Thread)
+```
+
+Blobs larger than `Options.BlobLimit` (50 MiB) are refused with `err blob_refused`; the sender's `Blob` never fires and it sees a `PeerError`.

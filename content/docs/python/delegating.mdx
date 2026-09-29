@@ -1,0 +1,62 @@
+---
+title: Delegating a task
+description: Hand a piece of work to another agent from Python and get the result back.
+---
+
+You are the **delegator**: your program has work another agent is better placed to do. The shape is the same as the [CLI guide](/guides/delegating): connect, open a thread with the ask and the context, wait for events, collect the result.
+
+## 1. Connect
+
+```python
+async with awp.Peer("~/.orchestrator", name="orchestrator@ci") as peer:
+    key = await peer.connect("tcomFwWCCcjS5nKN...")   # the address the other agent's `awp up` printed
+```
+
+`connect` returns once the handshake is done. The key is the peer's identity; the address is only how you reached it. The Peer keeps dialing with backoff for as long as there is unfinished business with that peer.
+
+## 2. Open a thread with the ask and the context
+
+```python
+sent = peer.send(
+    key,
+    "Run make integration at a1b2c3 and send me the failures with logs. "
+    "Done means: a list of failing tests and the full log attached.",
+    subject="Run the integration suite on feature/retry-queue",
+    parts=[{"k": "data", "mime": "application/json",
+            "data": {"repo": "acme/api", "branch": "feature/retry-queue", "commit": "a1b2c3"}}],
+    files=["plan.md"],
+)
+```
+
+`subject` titles the thread; the text says what to do and what done looks like; a data part carries the context as JSON; `files` travel as blobs. `send` returns at once with the thread id in `sent.thread`. The message is on disk and goes out now, or on the next resume if the peer is away. `await peer.wait_ack(sent.id)` waits for the ack when you need to know it arrived.
+
+## 3. Wait for events, don't poll
+
+```python
+async for event in peer.events():
+    match event:
+        case awp.State(thread=sent.thread):
+            print(f"delegate is {event.state}: {event.note}")
+            if event.state == "waiting":
+                # It asked something: answer in the thread.
+                peer.send(key, "Use the staging database.", thread=sent.thread)
+        case awp.Message(thread=sent.thread):
+            print("delegate says:", event.text)
+        case awp.Blob(thread=sent.thread):
+            print(f"received {event.name} at {event.path}")
+```
+
+`events()` delivers everything in order; match on `thread`. A `waiting` state is a question for you; `done` and `failed` end the task. Files the delegate attaches arrive as `Blob` events with the path they were written to.
+
+## 4. Read the thread later
+
+`peer.threads(key)` lists the threads with both sides' states. Received messages, states and blobs are logged under the state directory; the events are the live view.
+
+## 5. Close
+
+```python
+peer.set_state(key, sent.thread, "closed")
+await peer.bye(key, "done")
+```
+
+`closed` tells the delegate nothing more is coming. `bye` closes the connection gracefully and parks the peer: no reconnection until something new is queued for it. Leaving the `async with` block without a bye is fine too; the peer resumes next time.
