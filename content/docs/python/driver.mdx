@@ -1,0 +1,54 @@
+---
+title: The driver
+description: python -m awp runs a peer driven over stdin and stdout, for tests and other languages.
+---
+
+```bash
+python -m awp --state DIR [--name NAME] listen tcp:127.0.0.1:7000
+python -m awp --state DIR [--name NAME] connect tc...
+```
+
+The driver is a `Peer` whose commands come from stdin and whose events go to stdout, one JSON object per line each way. It is what the reference implementation's interop tests drive, and the TypeScript SDK's `awp-peer` speaks the same contract, so a test written once runs against both.
+
+`ADDR` is `tcp:HOST:PORT`, `unix:/path`, `tailcat` (to listen) or a tailcat address (to connect). Other flags: `--ping-interval SECS` (default 30, 0 disables), `--max-blob BYTES` (default 50 MiB), `--trust KEY` (repeatable), `--about TEXT`, `-v` for debug logging on stderr. Closing stdin does not stop the peer.
+
+## Commands (stdin)
+
+| Command | Fields | Does |
+|---|---|---|
+| `send` | `th`, `text`, optional `subject`, `re`, `parts` | Sends a `msg` in thread `th`; `parts` appends raw code or data parts after the text part. |
+| `state` | `th`, `state`, optional `note` | Sends a `state` for the thread. |
+| `blob` | `th`, `path`, optional `text` | Sends the file as chunks, then a `msg` with a blob part. |
+| `grant` | `sub`, `caps`, `ttl` | Mints a grant to `sub` for `caps`, valid `ttl` seconds, and sends it. |
+| `bye` | optional `reason` | Closes gracefully. |
+| `quit` | | Exits at once, without a bye. |
+
+Any command may add `"peer":"ed25519:..."` to pick the target; the default is the last peer that connected. Commands given before any peer connected are queued and delivered to the first one.
+
+```json
+{"cmd":"send","th":"t1","subject":"Run the suite","text":"Please run make integration."}
+{"cmd":"state","th":"t1","state":"waiting","note":"need the branch name"}
+{"cmd":"blob","th":"t1","path":"/tmp/test-output.log","text":"log attached"}
+{"cmd":"grant","sub":"ed25519:6EPXkq2TFR8tWi49c2x809PIBLePjuGFm-CQqb859bw","caps":["fs:read"],"ttl":3600}
+{"cmd":"bye","reason":"done"}
+```
+
+## Events (stdout)
+
+| Event | Fields | When |
+|---|---|---|
+| `identity` | `key`, `name` | At start. |
+| `listening` | `addr`, `key` | The listener is up. |
+| `connected` | `key`, `name`, `caps`, `about` | A handshake completed. |
+| `recv` | `msg` | A line arrived: the object as sent, `t` says which. Chunks come without their data. |
+| `sent` | `id`, `t` | A command's message went out. |
+| `acked` | `id` | The peer acked a message of ours. |
+| `blob` | `ref`, `path`, `size`, `sha256` | A blob was received in full and written to `path`. |
+| `disconnected` | `reason`, `key` | The connection ended. |
+| `error` | `detail` | A command was refused, or something went wrong. |
+
+```json
+{"event":"recv","msg":{"t":"msg","id":"01M3NA0JGVBC89EAGW9YVS3SXP","ts":"2026-09-29T00:46:08.411Z","th":"t1","subject":"Run the suite","parts":[{"k":"text","text":"Please run make integration."}]}}
+{"event":"acked","id":"01M3NA0K28VDXVSW0EZRFPG531"}
+{"event":"blob","ref":"blob_44","path":"/home/me/.awp-py/blobs/df26.../blob_44","size":183422,"sha256":"73cf..."}
+```

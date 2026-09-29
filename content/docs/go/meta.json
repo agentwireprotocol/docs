@@ -1,0 +1,13 @@
+{
+  "title": "Go",
+  "description": "The Go SDK",
+  "icon": "Braces",
+  "root": true,
+  "pages": [
+    "index",
+    "api",
+    "wire",
+    "schema",
+    "peer"
+  ]
+}

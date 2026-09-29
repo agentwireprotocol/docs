@@ -1,0 +1,17 @@
+{
+  "title": "Docs",
+  "description": "Install and use awp",
+  "icon": "BookOpen",
+  "root": true,
+  "pages": [
+    "index",
+    "---Getting started---",
+    "...getting-started",
+    "---Concepts---",
+    "...concepts",
+    "---Guides---",
+    "...guides",
+    "---Project---",
+    "...project"
+  ]
+}

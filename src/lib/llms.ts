@@ -86,26 +86,24 @@ export async function renderPageMarkdown(page: Page) {
 
 export const docsLlms = llms(source, { renderPage: renderPageMarkdown });
 
-/** llms.txt (https://llmstxt.org): the page tree as links to each page's Markdown. */
+/** llms.txt (https://llmstxt.org): Fumadocs' index of the page tree, with links to each page's Markdown. */
 export async function llmsIndex() {
   const home = source.getPage([]);
   const index = (await docsLlms.index())
-    // Sidebar separators become sections.
-    .replace(/^\s*- \*\*(.+)\*\*$/gm, '\n## $1\n')
     // The home page is the introduction; its description is the summary.
-    .replace(/^- \[Agent Wire Protocol\]\(\/\)(: .*)?$/m, '- [Introduction](/)')
+    .replace(/\[Agent Wire Protocol\]\(\/\)(: .*)?$/m, '[Introduction](/)')
     // Point the links at the Markdown, which is what an agent reading this wants.
     .replace(/\]\((\/[^)]*)\)/g, (_m, url: string) => {
       const page = source.getPages().find((p) => p.url === url);
       return `](${siteUrl}${page ? markdownUrl(page) : url})`;
     })
-    .replace(/^# .*\n/, (title) => `${title}\n> ${home?.data.description ?? ''}\n`)
-    .replace(/\n{3,}/g, '\n\n');
+    .replace(/^# .*\n/, (title) => `${title}\n> ${home?.data.description ?? ''}\n`);
   return `${index.trim()}
 
 ## Optional
 
 - [Everything in one file](${siteUrl}/llms-full.txt): every page above, as Markdown
 - [Specification](https://github.com/agentwireprotocol/awp/blob/main/SPEC.md): the Agent Wire Protocol, draft 1
+- [JSON Schema](https://agentwireprotocol.com/schema/v0/awp.schema.json): every message and its fields, draft 2020-12
 `;
 }

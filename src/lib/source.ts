@@ -1,24 +1,34 @@
 import type { StaticSource } from 'fumadocs-core/source';
 import { loader } from 'fumadocs-core/source';
+import type { Item, Node, Root } from 'fumadocs-core/page-tree';
 import { type CollectionEntry, getCollection } from 'astro:content';
 import * as path from 'node:path';
 import { structure, type StructuredData } from 'fumadocs-core/mdx-plugins';
 
+// The content has two root folders, which the sidebar shows as tabs: docs/
+// and reference/. The docs folder is the site itself, so its name stays out
+// of the URLs: content/docs/docs/concepts/threads.mdx is /concepts/threads.
 export const source = loader({
   source: await createMySource(),
   baseUrl: '/',
+  slugs(file, next) {
+    const slugs = next();
+    return slugs[0] === 'docs' ? slugs.slice(1) : slugs;
+  },
 });
 
 // The sidebar calls the home page "Introduction"; the page itself keeps its
 // title, "Agent Wire Protocol".
-export function pageTree() {
+export function pageTree(): Root {
   const tree = source.getPageTree();
-  return {
-    ...tree,
-    children: tree.children.map((node) =>
-      node.type === 'page' && node.url === '/' ? { ...node, name: 'Introduction' } : node,
-    ),
+  const rename = (node: Node): Node => {
+    if (node.type === 'page') return node.url === '/' ? { ...node, name: 'Introduction' } : node;
+    if (node.type === 'folder') {
+      return { ...node, index: node.index && (rename(node.index) as Item), children: node.children.map(rename) };
+    }
+    return node;
   };
+  return { ...tree, children: tree.children.map(rename) };
 }
 
 export function getStructuredData(entry: CollectionEntry<'docs'>): StructuredData {

@@ -1,0 +1,11 @@
+{
+  "title": "Python",
+  "description": "The Python SDK",
+  "icon": "SquareTerminal",
+  "root": true,
+  "pages": [
+    "index",
+    "api",
+    "driver"
+  ]
+}

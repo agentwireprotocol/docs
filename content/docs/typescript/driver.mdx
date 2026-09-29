@@ -1,0 +1,15 @@
+---
+title: The driver
+description: awp-peer runs a peer driven over stdin and stdout, for tests and other languages.
+---
+
+```bash
+npx awp-peer --state DIR [--name NAME] listen tcp:127.0.0.1:7000
+npx awp-peer --state DIR [--name NAME] connect tc...
+```
+
+The driver is a `Peer` whose commands come from stdin and whose events go to stdout, one JSON object per line each way. It speaks the same contract as the Python SDK's [`python -m awp`](/python/driver), command for command and event for event, so a test written once runs against both.
+
+`ADDR` is `tcp:HOST:PORT`, `unix:/path`, `tailcat` (to listen) or a tailcat address (to connect). Flags: `--ping-interval SECS` (default 30, 0 disables), `--max-blob BYTES` (default 50 MiB), `--trust KEY` (repeatable), `--about TEXT`, `-v`. Closing stdin does not stop the peer.
+
+Commands: `send`, `state`, `blob`, `grant`, `bye`, `quit`. Events: `identity`, `listening`, `connected`, `recv`, `sent`, `acked`, `blob`, `disconnected`, `error`. The [Python driver page](/python/driver) lists every field.

@@ -1,0 +1,63 @@
+---
+title: API
+description: The Go SDK's Options, the Peer's methods, and every event.
+---
+
+```go
+import "github.com/agentwireprotocol/go-sdk/awp"
+```
+
+## Options
+
+| Field | Meaning |
+|---|---|
+| `Dir` | The state directory: identity, the SQLite store with the outbox, threads and grants, and received blobs. Empty means a temporary directory with a fresh identity, removed on `Close`. |
+| `Name`, `About` | Sent in hello. `Name` defaults to `awp@<hostname>`. |
+| `Listen` | Addresses to accept connections on: `tailcat`, `tcp:host:port`, `unix:/path`. Empty for a peer that only connects out. |
+| `Advertise` | The address sent in hello so peers can reconnect: the tailcat address by default, `none` to send nothing. |
+| `Policy` | Admission and capabilities: `Accept` (`awp.AcceptAny` or `awp.AcceptAllowlist`), `Allow`, `Trust`, `Serve` (`exec`, `fs:read`, `fs:write` the Peer fulfils itself), `Root`. |
+| `BlobLimit` | The largest blob sent or received; 50 MiB. |
+| `PingInterval`, `HandshakeTimeout`, `MaxBackoff`, `OutboxTTL` | 30 s, 30 s, 60 s, 7 days. |
+| `AllowPlaintext` | Permits plain TCP to public addresses, which the spec advises against. |
+| `Presence` | Publishes this Peer's signed presence to the network. |
+| `Logf`, `Trace` | The engine's log, and every line sent and received. |
+
+## Peer
+
+| Method | Does |
+|---|---|
+| `New(o Options) (*Peer, error)` | Opens the state, loads or creates the identity, starts listening and reconnecting. |
+| `Close() error` | Stops everything without a bye; peers resume next time. |
+| `Key()`, `Name()`, `Dir()` | The identity, the hello name, the state directory. |
+| `Addresses() []string` | What the Peer listens on, tailcat first. `TailcatAddress()` says why it is missing while the tunnel starts. |
+| `Connect(ctx, addr) (string, error)` | Dials and returns the peer's key after the handshake. |
+| `Connected(peer) bool` | Whether there is a live connection now. |
+| `Send(Draft) (*Sent, error)` | Queues a message: `To`, `Thread` (empty starts one), `Subject`, `ReplyTo`, `Text`, `Parts`, `Files`. |
+| `Delivered(ctx, id) error` | Waits for the peer's ack. |
+| `SetState(peer, thread, state, note) (*Sent, error)` | This side's state on a thread: `awp.StateWorking` and the others, or any word. |
+| `Grant(peer, caps, ttl) (*Grant, error)` | Mints, records and sends a grant. `Revoke(hash)`, `Grants()`, `Caps(peer)` go with it. |
+| `Introduce(to, peer, caps, ttl, thread) (*Sent, error)` | Hands `to` the address of `peer` with a grant. |
+| `Bye(peer, reason) error` | Closes gracefully and parks the peer. |
+| `Peers()`, `Resolve(s)` | Every peer met, and a key from a name or a prefix. |
+| `Threads(peer)`, `Thread(peer, id)`, `History(peer, thread)`, `MarkRead(peer, thread)` | Threads, one thread, a thread's events in order, and reading. |
+| `Events(ctx) <-chan Event` | Every event from now on, until `ctx` ends. `Changed()` is the untyped version: a channel closed at the next change. |
+| `Node() *node.Node` | The engine underneath. |
+
+## Events
+
+Every event has `PeerKey()` and `Time()`. Switch on the concrete type:
+
+| Type | Fields | When |
+|---|---|---|
+| `Connected` | `Name`, `About`, `Caps`, `Via`, `Outbound` | A handshake completed. |
+| `Disconnected` | `Reason`, `Via` | The connection ended; the engine reconnects while there is unfinished business. |
+| `Refused` | `Name`, `Reason` | The admission policy turned a peer away. |
+| `Message` | `ID`, `Thread`, `Subject`, `ReplyTo`, `Parts`, `Requests`, `Sent`; `Text()` | A msg, stored and acked before this is delivered. `Requests` lists capability requests in the data parts, marked allowed or not. |
+| `StateChanged` | `ID`, `Thread`, `State`, `Note`, `Sent` | The peer set its state. |
+| `Blob` | `Thread`, `Ref`, `Name`, `Mime`, `Size`, `Path` | A file arrived in full. |
+| `GrantReceived` | `Issuer`, `Caps`, `Expires` | A grant to this Peer, now held. |
+| `Introduced` | `Thread`, `Key`, `Name`, `Address` | Another peer's key and address to connect to. |
+| `PeerError` | `Code`, `Detail`, `ReplyTo`, `Ref` | An err the peer sent. |
+| `Bye` | `Reason` | The peer closed gracefully; it is parked. |
+
+`History` returns the same types for a thread, with `Sent` true on the messages and states this Peer sent.

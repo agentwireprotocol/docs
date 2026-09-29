@@ -1,0 +1,117 @@
+---
+title: wire
+description: "The wire format as Go types and functions: framing, messages, ids, keys, signatures, canonical JSON, grants."
+---
+
+```go
+import "github.com/agentwireprotocol/awp/wire"
+```
+
+`wire` has no I/O policy of its own. It reads and writes lines, encodes and decodes messages, and does the cryptography; what to send when is the peer's business. The daemon, the tests and the conformance runner are all built on it.
+
+## Framing
+
+One JSON object per line, at most `wire.MaxLine` (1 MiB) bytes before the newline.
+
+```go
+r := wire.NewReader(conn)   // *wire.Reader
+w := wire.NewWriter(conn)   // *wire.Writer, safe for concurrent use
+
+line, err := r.ReadLine()   // without the newline; wire.ErrLineTooLong over 1 MiB
+err = w.WriteLine(line)     // adds the newline; one Write call, so lines never interleave
+```
+
+A final line without a newline is `io.ErrUnexpectedEOF`, since a well-formed peer always terminates lines.
+
+## Messages
+
+Every message is a struct that embeds `wire.Envelope` (`T`, `ID`, `TS`, `Th`, `Re`) and adds its own fields. The type names follow the spec: `Hello`, `Auth`, `Resume`, `Msg`, `State`, `Ack`, `Chunk`, `Ping`, `Pong`, `Bye`, `Err`, `GrantMsg`, `Introduce`, and the extensions `PresenceMsg`, `Mirror` and `Private`. The `T*` constants hold the `t` values, `Part*` the part kinds, `State*` the recommended thread states and `Err*` the error codes. The [schema reference](/reference/schema) documents every field; it is generated from these types.
+
+```go
+line, err := wire.Encode(wire.Msg{
+    Envelope: wire.Envelope{T: wire.TMsg, ID: ids.New(), TS: wire.Now(), Th: "thr_9k2"},
+    Subject:  "Run the integration suite",
+    Parts:    []wire.Part{{K: wire.PartText, Text: "Please run `make integration`."}},
+})
+```
+
+`Encode` marshals without HTML escaping, so text reads naturally, and refuses a line over 1 MiB. On the way in, `ParseEnvelope` reads the envelope of a line first (its error `wire.ErrNotObject` is what a receiver answers with `bad_frame`), then `Decode` fills the struct for the type:
+
+```go
+env, err := wire.ParseEnvelope(line)
+switch env.T {
+case wire.TMsg:
+    var m wire.Msg
+    err = wire.Decode(line, &m)
+case wire.TErr:
+    var e wire.Err
+    err = wire.Decode(line, &e)
+    closes := wire.ErrCloses(e.Code)
+}
+```
+
+`wire.Messages()` lists every type with its `reflect.Type`, `wire.PartKinds()` the fields of each part kind, `wire.ErrCodes()` and `wire.ThreadStates()` the vocabularies, `wire.Extensions()` the types not in the spec.
+
+A `Part` marshals exactly the fields of its kind: a text part never grows a stray `mime`, a zero-length blob part still carries `"size":0`.
+
+## Ids and timestamps
+
+```go
+ids := wire.NewIDGen()
+id := ids.New()              // a ULID; strictly increasing, even within one millisecond
+ids.Observe(lastPersistedID) // after a restart, so ids keep increasing
+t, ok := wire.IDTime(id)     // the time a ULID carries
+
+ts := wire.Now()             // RFC 3339 UTC, millisecond precision
+t, err = wire.ParseTime(ts)  // any RFC 3339 timestamp
+```
+
+Resume compares ids as strings, which is why they must increase even when the clock steps back.
+
+## Keys and the auth signature
+
+```go
+pub, priv, _ := ed25519.GenerateKey(nil)
+key := wire.FormatKey(pub)            // "ed25519:" + unpadded base64url
+pub, err := wire.ParseKey(key)        // accepts padded and standard base64 too
+short := wire.ShortKey(key)           // the first ten characters, for humans
+fp := wire.Fingerprint(pub)           // "SHA256:..." for about texts
+nonce := wire.Nonce(32)               // random bytes, base64url
+```
+
+The auth signature covers both hello lines, exactly as sent and received:
+
+```go
+sig := wire.SignAuth(priv, myHello, peerHello)                 // in my auth
+err := wire.VerifyAuth(peerPub, theirSig, peerHello, myHello)  // on theirs
+```
+
+`wire.AuthPayload` builds the signed byte string (`awp-auth-v0`, a zero byte, my hello, a zero byte, the peer's hello) if you need it yourself.
+
+## Canonical JSON and grants
+
+Grants and presence documents are signed over canonical JSON: keys sorted, no whitespace, UTF-8.
+
+```go
+canon, err := wire.Canonical(doc)     // re-encode a document
+canon, err = wire.CanonicalValue(v)   // encode a Go value
+
+g, err := wire.MintGrant(priv, subKey, []string{"fs:read"}, time.Now().Add(time.Hour), "")
+raw := g.Raw                          // the object as it travels, signature included
+g, err = wire.ParseGrant(raw, time.Now())   // verifies iss's signature; wire.ErrGrantExpired if past exp
+ok := g.Has("fs:read")
+hash := g.Hash()                      // how awp names a grant
+```
+
+The last argument of `MintGrant` is `aud`, the extension that binds an introduction grant to the peer it is meant for. `wire.GrantObject` is the wire form with JSON tags, for building or inspecting one by hand.
+
+## Presence
+
+The presence extension is a signed document about an agent, gossiped to peers that list `presence` in their hello caps.
+
+```go
+doc, err := wire.SignPresence(priv, &wire.Presence{Name: "example@laptop", Seq: 1, TS: wire.Now()})
+p, err := wire.ParsePresence(doc)     // verifies origin's signature
+```
+
+`wire.MaxPresenceBytes` caps a document at 64 KiB and `wire.PresenceMaxHops` bounds forwarding.

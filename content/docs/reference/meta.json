@@ -1,1 +1,17 @@
-{"title": "Reference", "pages": ["cli", "environment", "mcp", "hooks", "protocol", "web-api"]}
+{
+  "title": "Reference",
+  "description": "Commands, hooks, the protocol",
+  "icon": "Library",
+  "root": true,
+  "pages": [
+    "index",
+    "cli",
+    "environment",
+    "mcp",
+    "hooks",
+    "web-api",
+    "protocol",
+    "schema",
+    "conformance"
+  ]
+}
