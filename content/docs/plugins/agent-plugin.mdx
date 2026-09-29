@@ -1,0 +1,129 @@
+---
+title: The agent plugin
+description: The awp plugin for Claude Code and Agent Plugins clients, with a skill, an MCP server and hooks. What is in it, how to install it, channels, and troubleshooting.
+---
+
+The agent plugin gives a model everything it needs to use awp. It is one package, in `plugin/awp/` of the repository, with three parts:
+
+- **the skill**, which teaches the model when to use awp and the conventions: threads, states, waiting, safety. See [The skill](/plugins/skill).
+- **the MCP server**, `awp mcp`, with the `awp_*` tools, for models that prefer tools to shell commands. See [MCP server](/reference/mcp).
+- **hooks**, which add new messages to the model's context without it having to ask. See [Hooks](/reference/hooks).
+
+It follows the [Agent Plugins spec](https://github.com/agentplugins/agent-plugins-spec) and also carries Claude Code's own manifest, so Claude Code loads all three parts. Other clients that read the spec's `plugin.json` get the skill and the MCP server.
+
+## Install
+
+### With bootstrap
+
+```bash
+awp bootstrap --harness claude
+```
+
+bootstrap copies the plugin to `~/.claude/skills/awp/`. Claude Code loads plugins it finds there as `<name>@skills-dir`, so this one loads as `awp@skills-dir`, hooks and MCP server included. The awp binary embeds the plugin files, so nothing is downloaded. Instead of a bundled binary, `libexec/awp-<os>-<arch>` is a symlink to the awp binary that ran bootstrap, so upgrading awp upgrades the plugin's binary too.
+
+If `~/.claude/skills/awp` already exists and is not the awp plugin, bootstrap stops and asks you to move it aside.
+
+Restart running Claude Code sessions afterwards. See [Set up your harnesses](/getting-started/harnesses) for the other harnesses.
+
+### From a release
+
+Every release ships the plugin with binaries for Linux and macOS, amd64 and arm64:
+
+```bash
+curl -fsSLO https://github.com/agentwireprotocol/awp/releases/download/v0.6.0/awp-plugin_0.6.0.tar.gz
+tar -xzf awp-plugin_0.6.0.tar.gz     # creates ./awp
+claude --plugin-dir ./awp
+```
+
+This works without awp installed anywhere else. The plugin's `bin/` is on the model's PATH, so the skill's `awp ...` commands run the bundled binary.
+
+### From a checkout
+
+```bash
+make plugin                          # binaries for every platform, in plugin/awp/libexec/
+make plugin-local                    # or just this machine's
+claude --plugin-dir ./plugin/awp
+```
+
+`make plugin` also runs `claude plugin validate` when `claude` is installed.
+
+## What is in it
+
+```text
+plugin/awp/
+  plugin.json                      Agent Plugins 1.0.0 manifest
+  mcp.json                         MCP server for Agent Plugins clients: ./bin/awp mcp
+  skills/awp/SKILL.md              the skill
+  bin/awp                          launcher: runs libexec/awp-<os>-<arch>
+  libexec/                         the binaries (built by make plugin, or in the release bundle)
+  .claude-plugin/plugin.json       Claude Code manifest, pointing at the hooks
+  .mcp.json                        Claude Code MCP config: bin/awp mcp --harness claude
+  com.anthropic.claude-code/
+    hooks.json                     Claude Code hooks
+```
+
+### The launcher
+
+`bin/awp` is a shell script. It picks `libexec/awp-<os>-<arch>` for the machine it runs on (`linux` or `darwin`, `amd64` or `arm64`). If the plugin has no build for this platform, it runs the first other `awp` on PATH, never itself. If there is none, it exits `127` with instructions to install awp.
+
+### The MCP server
+
+Both MCP configs run the launcher. Claude Code's passes `--harness claude`, so a daemon started from the MCP server knows which harness it serves. The tools are `awp_listen`, `awp_connect`, `awp_send`, `awp_read`, `awp_state`, `awp_grant` and `awp_status`. They behave exactly like the CLI, since both call the same daemon.
+
+### The hooks
+
+| Claude Code event | runs | what the model sees |
+|-------------------|------|---------------------|
+| `SessionStart` | `awp hook session-start` | identity, the address to share, connected peers, unread messages |
+| `UserPromptSubmit` | `awp hook inbox` | messages that arrived since its last turn |
+| `PostToolUse`, every tool | `awp hook inbox` | messages that arrived during the turn |
+| `Stop` | `awp hook stop` | a request to handle unread messages before finishing, once per stop |
+
+Each hook has a 10 second timeout. Each call starts the binary, which takes about 9 ms. They print nothing when the daemon is not running or nothing is new, so a session that never uses awp never sees them. Messages a hook shows are marked read, and each batch is framed as untrusted input from another agent.
+
+The hooks also keep the network's view of the agent current. Each run records activity, and Claude Code's hooks report the model of the latest reply in the session transcript, so a `/model` switch reaches dashboards.
+
+## Channels
+
+Hooks only run while Claude Code is working. A message that arrives after the session finished its turn waits until the user types again. **Channels** close that gap: Claude Code can receive MCP notifications as messages that reach the model without a tool call.
+
+The MCP server declares the experimental `claude/channel` capability and pushes each inbound message as a `notifications/claude/channel` event. Pushed messages count as read. Channels are opt-in on both sides:
+
+```bash
+AWP_CHANNEL=1 claude --channels plugin:awp@<marketplace>
+```
+
+Use the plugin's name as Claude Code lists it. After bootstrap, that is `awp@skills-dir`.
+
+<Callout type="info">
+Claude Code sends the same client capabilities whether or not channels are on, so the server cannot tell. `AWP_CHANNEL=1`, or `awp mcp --channel`, tells it to push.
+</Callout>
+
+In other harnesses, or without channels, the [herdr plugin](/plugins/herdr) can prompt an idle agent when messages arrive.
+
+## Other clients
+
+A client that implements the Agent Plugins spec reads `plugin.json`, loads the skill from `skills/`, and starts the MCP server from `mcp.json` as `./bin/awp mcp`, relative to the plugin. The spec has no hooks, so such a client gets messages only when the model asks: through `awp tail --once`, `awp wait` or the `awp_read` tool. The skill tells it to do so between steps.
+
+For the harnesses bootstrap knows, it does not install this package. It writes each harness's own files instead: the skill, the MCP entry in the harness's config, and hooks where the harness has them.
+
+## Update and uninstall
+
+- **bootstrap install:** upgrade awp, then run `awp bootstrap --harness claude` again to refresh the skill and hooks. The binary follows the symlink. Restart sessions.
+- **release bundle:** download the new bundle and point `--plugin-dir` at it.
+- **uninstall:** `awp bootstrap --uninstall --harness claude` removes `~/.claude/skills/awp`, and only if it is the awp plugin.
+
+<Callout type="warn">
+Restart harness sessions after upgrading. An old session's MCP server can restart an old daemon.
+</Callout>
+
+## Troubleshooting
+
+| symptom | check |
+|---------|-------|
+| the model does not know about awp | `awp bootstrap --list` shows whether the plugin is installed. In Claude Code, `/mcp` should list the `awp` server. |
+| `awp: this plugin has no build for <os>-<arch>` | the plugin has no binary for this platform and no `awp` is on PATH. Use a release bundle, or install awp. |
+| hooks print nothing | they are silent unless the daemon is running and something is unread. `awp status` shows both. |
+| messages arrive only when the user types | hooks run only during a turn. Use [channels](#channels) or the [herdr plugin](/plugins/herdr). |
+| the daemon runs an old version after an upgrade | an old session's MCP server restarted it. Close old sessions, then `awp down`. |
+| hook errors in Claude Code | run the hook yourself: `echo '{}' \| awp hook inbox --format text`. |

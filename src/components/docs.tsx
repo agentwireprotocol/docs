@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { navigate } from 'astro:transitions/client';
 import { RootProvider } from 'fumadocs-ui/provider/astro';
 import type { AstroProviderProps } from 'fumadocs-core/framework/astro';
-import { Braces, Compass } from 'lucide-react';
+import { Braces, Compass, Puzzle } from 'lucide-react';
 import { SiPython, SiTypescript } from '@icons-pack/react-simple-icons';
 import SearchDialog from './search';
 import { Gopher } from './gopher';
@@ -18,6 +18,7 @@ import { PageHeader, type PageHeaderProps } from './page-header';
 // tree, since React nodes cannot cross the Astro island boundary inside it.
 const sections: Record<string, ReactNode> = {
   '/': <Compass />,
+  '/plugins': <Puzzle />,
   '/reference': <Braces />,
   '/go': <Gopher />,
   '/python': <SiPython />,
