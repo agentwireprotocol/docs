@@ -2,6 +2,7 @@
   "title": "Agent Wire Protocol",
   "pages": [
     "docs",
+    "plugins",
     "reference",
     "go",
     "python",

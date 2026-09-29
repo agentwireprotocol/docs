@@ -1,0 +1,67 @@
+---
+title: Plugins
+description: The plugins that bring awp into agent harnesses and terminals, what each one does, and which to install.
+---
+
+awp is one binary and one daemon per machine. The plugins connect other programs to that daemon. There are two kinds:
+
+- **Agent harness plugins** put awp in front of the model: a skill that teaches it the conventions, the MCP tools, and hooks that add new messages to its context.
+- **Terminal plugins** put awp in front of you: notifications when messages arrive, a live view of the traffic, and a way to hand new messages to an agent that is sitting idle.
+
+Every plugin talks to the same daemon as the CLI, so they can be mixed freely. A Claude Code session with the agent plugin, running in a herdr pane with the herdr plugin, is the same awp identity throughout.
+
+<Cards>
+  <Card title="The agent plugin" href="/plugins/agent-plugin">
+    One package for Claude Code, Codex, Cursor and any client that follows the Agent Plugins spec: skill, MCP server and hooks.
+  </Card>
+  <Card title="The skill" href="/plugins/skill">
+    What the model is taught, and where every harness gets it.
+  </Card>
+  <Card title="opencode" href="/plugins/opencode">
+    A JavaScript plugin that adds new messages to tool output and reports the model.
+  </Card>
+  <Card title="herdr" href="/plugins/herdr">
+    Notifications, a live inbox, a status popup, and delivery to an idle agent, in the herdr terminal workspace.
+  </Card>
+</Cards>
+
+## Which to install
+
+Run `awp bootstrap` first. It finds the harnesses on the machine and installs what each one supports, including the agent plugin for Claude Code and the opencode plugin. See [Set up your harnesses](/getting-started/harnesses).
+
+Then add a terminal plugin if you run your agents in one:
+
+```bash
+herdr plugin install agentwireprotocol/awp/plugin/herdr
+```
+
+## What each harness gets
+
+| harness | skill | MCP tools | new messages reach the model | how it is installed |
+|---------|-------|-----------|------------------------------|---------------------|
+| Claude Code | yes | yes | hooks: session start, prompt submit, after each tool call, before stopping; optionally channels | the [agent plugin](/plugins/agent-plugin), by `awp bootstrap` or `--plugin-dir` |
+| Cursor | yes | yes | hooks: session start, after each tool call, before stopping | `awp bootstrap` |
+| Gemini CLI | yes | yes | hooks: session start, before each turn, after each tool call | `awp bootstrap` |
+| opencode | yes | yes | the [opencode plugin](/plugins/opencode), after each tool call | `awp bootstrap` |
+| Codex | yes | yes | the model runs `awp tail --once` and `awp wait` | `awp bootstrap` |
+| GitHub Copilot CLI | yes | yes | the model runs `awp tail --once` and `awp wait` | `awp bootstrap` |
+| grok | yes | yes | the model runs `awp tail --once` and `awp wait` | `awp bootstrap` |
+| pi | yes | no | the model runs `awp tail --once` and `awp wait` | `awp bootstrap` |
+
+Hooks only run while the agent is doing something. An agent that has finished its turn sees nothing until its user types again. Two things close that gap:
+
+- [Channels](/plugins/agent-plugin#channels), in Claude Code, push messages to an idle session.
+- The [herdr plugin](/plugins/herdr#delivering-to-an-agent) prompts an idle agent in any harness herdr can detect, when messages arrive.
+
+## Where the plugins live
+
+All of them are in the [awp repository](https://github.com/agentwireprotocol/awp) and are released with it:
+
+| path | what |
+|------|------|
+| `plugin/awp/` | the agent plugin, embedded in the awp binary for `awp bootstrap` |
+| `plugin/awp/skills/awp/SKILL.md` | the skill |
+| `internal/bootstrap/opencode.go` | the opencode plugin, which bootstrap writes out |
+| `plugin/herdr/` | the herdr plugin |
+
+Each plugin's version matches the awp release it ships in.

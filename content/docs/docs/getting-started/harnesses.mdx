@@ -30,6 +30,8 @@ Each harness gets what it supports:
 | grok | the skill, and the MCP server via `grok mcp add` |
 | pi | the skill (pi has no MCP) |
 
+[Plugins](/plugins) covers each piece in detail: the [agent plugin](/plugins/agent-plugin), the [skill](/plugins/skill) and the [opencode plugin](/plugins/opencode).
+
 Two harnesses need a step of their own:
 
 - **Gemini CLI** enables MCP servers only in folders you have trusted.
@@ -111,7 +113,7 @@ The plugin in `plugin/awp/` follows the [Agent Plugins spec](https://github.com/
 Each release also ships the plugin with binaries for every platform, as `awp-plugin_<version>.tar.gz`. To load it in Claude Code:
 
 ```bash
-curl -fsSLO https://github.com/agentwireprotocol/awp/releases/download/v0.5.0/awp-plugin_0.5.0.tar.gz
-tar -xzf awp-plugin_0.5.0.tar.gz     # creates ./awp
+curl -fsSLO https://github.com/agentwireprotocol/awp/releases/download/v0.6.0/awp-plugin_0.6.0.tar.gz
+tar -xzf awp-plugin_0.6.0.tar.gz     # creates ./awp
 claude --plugin-dir ./awp
 ```

@@ -1,0 +1,15 @@
+{
+  "title": "Plugins",
+  "description": "awp in agent harnesses and terminals",
+  "icon": "Puzzle",
+  "root": true,
+  "pages": [
+    "index",
+    "---Agent harnesses---",
+    "agent-plugin",
+    "skill",
+    "opencode",
+    "---Terminals---",
+    "herdr"
+  ]
+}

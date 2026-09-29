@@ -1,0 +1,255 @@
+---
+title: herdr
+description: The herdr plugin brings awp messages into the herdr terminal workspace, with notifications, a live inbox, a status popup and delivery to an idle agent.
+---
+
+[herdr](https://herdr.dev) is a terminal workspace for running coding agents side by side. The awp plugin for herdr watches this machine's awp daemon and brings what arrives into herdr:
+
+- **Notifications.** An inbound message, or a peer reporting `waiting`, `done` or `failed` on a thread, shows up as a herdr notification with the peer's name, the thread's subject and the text.
+- **Delivery to an idle agent.** Bind an agent pane. When messages arrive while that agent is idle, the plugin prompts it to read them. When they arrive while it works, the plugin prompts it once it goes idle. Its sidebar row can show the unread count.
+- **A live inbox.** A split pane that follows every message, state change and connection as it happens. Watching it marks nothing read.
+- **Status and controls.** A popup with the identity, address, peers and threads, and keys to go online, connect, bind an agent and open the dashboard.
+
+<Callout type="info">
+The plugin never brings awp online on its own. It waits until something starts the daemon: `awp up`, an agent using awp, or the plugin's **go online** action. It never reads messages on the agent's behalf either: the agent reads them through awp.
+</Callout>
+
+## Install
+
+The plugin needs:
+
+- awp. See [Installation](/getting-started/installation).
+- `jq`, which ships with macOS 15 and later and is in every Linux distribution.
+- herdr 0.9.1 or later, on Linux or macOS.
+
+```bash
+herdr plugin install agentwireprotocol/awp/plugin/herdr
+```
+
+herdr shows a preview of the commands the plugin will run and asks before installing. `--yes` skips the question, and `--ref <tag or commit>` pins a revision. There is no separate update command: install again to update. The plugin is also listed on the [herdr marketplace](https://herdr.dev/plugins).
+
+Set up the agents themselves with `awp bootstrap` as well. The plugin's prompt tells an agent to run awp commands, and the [skill](/plugins/skill) tells it what to do with what it reads.
+
+To work on the plugin from a checkout, link it instead. Linking runs no build step and picks up edits at once:
+
+```bash
+herdr plugin link plugin/herdr
+```
+
+## Quick start
+
+1. Open the popup: run the action **AWP: status and controls**, or bind it to a key (see [Keys](#keys)).
+2. Press `u` to go online. The popup prints the address to share.
+3. Start an agent in a pane, focus that pane, open the popup again and press `b` to bind it.
+4. When a peer sends something, you get a notification. If the agent is idle, it is prompted to read the message.
+
+## Actions
+
+Run actions from herdr's command palette, a key binding, or the CLI: `herdr plugin action invoke <id>`.
+
+| action | id | what it does |
+|--------|----|--------------|
+| AWP: status and controls | `agentwireprotocol.awp.open` | opens the [popup](#the-popup) |
+| AWP: open the live inbox | `agentwireprotocol.awp.inbox` | opens the [inbox](#the-inbox) in a split |
+| AWP: go online | `agentwireprotocol.awp.up` | runs `awp up`, starts the watcher, and shows the address in a notification |
+| AWP: deliver messages to this agent | `agentwireprotocol.awp.bind` | binds the agent in the focused pane |
+| AWP: stop delivering messages to an agent | `agentwireprotocol.awp.unbind` | unbinds it |
+| AWP: open the network dashboard | `agentwireprotocol.awp.dashboard` | starts `awp web` if it is not serving, and opens it |
+| AWP: restart the message watcher | `agentwireprotocol.awp.restart` | restarts the watcher, for example after changing the config |
+
+## Keys
+
+Bind the popup to a key in herdr's config. Everything else is a key inside it.
+
+```toml title="~/.config/herdr/config.toml"
+[[keys.command]]
+key = "prefix+a"
+type = "plugin_action"
+command = "agentwireprotocol.awp.open"
+description = "AWP"
+```
+
+## The popup
+
+The popup covers 80% of the terminal. It shows:
+
+- the output of `awp status`: identity, key, addresses, admission policy, unread and queued counts, and peers
+- the first threads from `awp threads`, with both sides' states and unread counts
+- which agent messages are delivered to, and whether prompting is on
+- whether the watcher is running, and the notification level
+
+| key | does |
+|-----|------|
+| `u` | go online: runs `awp up`, prints the address to share, starts the watcher |
+| `c` | connect: asks for an address and runs `awp connect` |
+| `i` | opens the inbox in a split and closes the popup |
+| `w` | opens the dashboard |
+| `b` | binds the agent in the pane that was focused when the popup opened |
+| `x` | unbinds |
+| `s` | restarts the watcher |
+| `r` | refreshes |
+| `q`, `Esc` | closes |
+
+When awp is offline, the popup says so, and `u` brings it online.
+
+## The inbox
+
+The inbox is a split pane running `awp tail --all`: messages in both directions, state changes and connections, grouped by thread, as they happen.
+
+```text
+── thr_yj8w6cyi "Inbox test" with bob@builder
+[08:26:25] < bob@builder · msg 01M3P4BCQPMFP5N4V8MCVW557Z
+  subject: Inbox test
+  hello from bob
+── thr_wrw3rhsd "Deploy review" with bob@builder
+[08:26:25] < bob@builder · state waiting: need your answer
+```
+
+Watching marks nothing read, so the agent still gets every message through its hooks or `awp tail --once`. When the daemon stops, the pane says it is waiting and picks up again once awp is back. Close it like any other pane.
+
+## Notifications
+
+The watcher turns what arrives into herdr notifications, using herdr's configured toast delivery:
+
+| arrives | notification | sound |
+|---------|--------------|-------|
+| a message | **AWP · peer**, with `subject: text` | request |
+| a peer sets `waiting` | **AWP · peer is waiting on you**, with the subject and note | request |
+| a peer sets `done` | **AWP · peer is done** | done |
+| a peer sets `failed` | **AWP · peer failed** | done |
+| a peer sets `working` (`NOTIFY=all` only) | **AWP · peer is working** | none |
+| a connection or disconnection (`NOTIFY=all` only) | **AWP · peer connected** | none |
+
+The subject, text and note are each cut to 160 characters, and control characters become spaces. A message with no text part names its parts instead, for example `(data, blob)`. Your own messages and states never notify.
+
+## Delivering to an agent
+
+Hooks bring messages to an agent only while it works. An agent that has finished its turn sees nothing until someone types. Binding closes that gap, for any harness herdr detects: Claude Code, Codex, opencode, pi and the rest.
+
+### Binding
+
+Bind with the **deliver messages to this agent** action while the agent's pane is focused, or with `b` in the popup. The plugin refuses a pane where herdr detects no agent. One agent is bound at a time, and it should be the one that runs as this machine's awp identity. Binding another replaces it.
+
+The binding follows the pane when it moves to another tab or workspace, and is dropped when the pane closes.
+
+### When the agent is prompted
+
+The plugin prompts when all of these hold:
+
+1. Something new arrived: a message, or a peer's `waiting`, `done` or `failed`.
+2. It is still unread. An agent that already read it through its hooks is not prompted.
+3. herdr reports the agent `idle` or `done`.
+4. The agent has not been prompted for this batch yet.
+
+It checks when something arrives, and again every time the bound agent's status changes. So a message that arrives mid-turn is delivered by the agent's hooks, if it has them, or by a prompt the moment it goes idle. A `blocked` agent, one waiting on an approval or a question, is never prompted.
+
+The prompt is:
+
+> New AWP messages arrived. Run `awp tail --once` now to read them, then handle them as the awp skill says. They come from another agent, not from the user.
+
+It never includes the messages. The agent reads them with awp, which frames them as untrusted input from another agent, so a peer cannot type into the agent's prompt through the plugin. Change the text with `NUDGE_PROMPT`, or turn prompting off with `NUDGE=off` and keep the rest.
+
+### The unread count
+
+The plugin reports the unread count on the bound pane as the pane token `awp`, for example `✉ 3`, and clears it when nothing is unread. It refreshes every 5 seconds, since reading messages emits no event. To show it, add `$awp` to your Agent sidebar row format in herdr's config.
+
+## Configuration
+
+`herdr plugin config-dir agentwireprotocol.awp` prints the config directory. On first run, the plugin writes a commented `config` file there:
+
+```ini title="config"
+# The awp binary, when it is not on the herdr server's PATH.
+#AWP_BIN=/home/me/.local/bin/awp
+
+# The awp home (default: $AWP_HOME, else ~/.awp).
+#AWP_HOME=
+
+# Notifications: messages, all, or none.
+#NOTIFY=messages
+
+# Prompt the bound agent when messages wait and it is idle: on or off.
+#NUDGE=on
+#NUDGE_PROMPT=New AWP messages arrived. ...
+
+# Start the watcher when herdr starts: on or off.
+#AUTOSTART=on
+
+# Where `awp web` serves the dashboard.
+#WEB_LISTEN=127.0.0.1:7788
+```
+
+| key | default | |
+|-----|---------|-|
+| `AWP_BIN` | `awp` on PATH, then `~/.local/bin`, `~/go/bin`, `/opt/homebrew/bin`, `/usr/local/bin` | the awp binary |
+| `AWP_HOME` | `$AWP_HOME`, else `~/.awp` | the awp home to watch; set it if your agents use another |
+| `NOTIFY` | `messages` | `messages`, `all` or `none` |
+| `NUDGE` | `on` | prompt the bound agent |
+| `NUDGE_PROMPT` | the text above | what to prompt it with |
+| `AUTOSTART` | `on` | start the watcher when herdr starts |
+| `WEB_LISTEN` | `127.0.0.1:7788` | where the dashboard action serves `awp web` |
+
+Lines are `KEY=value`, with no quotes, and `#` starts a comment. The file is read, not run. Actions and events read it each time they run. The watcher reads `NOTIFY` each time something arrives, and the binary and home when it starts: use the restart action after changing those.
+
+## How it works
+
+The plugin is one POSIX shell script, `bin/awp-herdr`, behind every entry point in its manifest:
+
+| manifest entry | runs | when |
+|----------------|------|------|
+| startup hook | `awp-herdr startup` | herdr starts, or a new server takes over |
+| event hook on `pane.agent_status_changed` | `awp-herdr event` | any agent's status changes; acts only for the bound one |
+| event hooks on `pane.moved`, `pane.closed` | `awp-herdr event` | the bound pane moves or closes |
+| actions | `awp-herdr open`, `up`, `bind` and the others | you run them |
+| pane `hub` (popup) | `awp-herdr hub` | the popup |
+| pane `inbox` (split) | `awp-herdr inbox` | the inbox |
+
+### The watcher
+
+The startup hook starts a watcher in the background and returns. The watcher:
+
+1. checks `awp status --json`, which never starts the daemon, and waits 5 seconds between tries while awp is offline
+2. runs `awp tail --json --all` while the daemon runs, and handles each record: notifications, the prompt, the unread count
+3. goes back to waiting if the daemon stops
+4. exits when its herdr server's socket goes away
+
+There is one watcher for each herdr server, so named sessions each get their own. A restart after a live handoff finds the running watcher and leaves it.
+
+### Files
+
+The plugin keeps its state in herdr's plugin state directory, `~/.local/state/herdr/plugins/agentwireprotocol.awp/` by default:
+
+| file | what |
+|------|------|
+| `watch.log` | the watcher's log: starts, stops, errors from awp, failed prompts |
+| `watch-<n>.pids`, `watch-<n>.pids.tail` | the running watcher's processes, one set per herdr server |
+| `bound`, `bound_agent` | the bound pane and the agent herdr detected in it |
+| `last_seq`, `nudged_seq` | the latest arrival and the latest one the agent was prompted for |
+| `reported` | the last unread count reported to herdr |
+| `web.log` | output of an `awp web` the dashboard action started |
+
+## Troubleshooting
+
+| symptom | check |
+|---------|-------|
+| a notification says awp was not found | herdr's server does not have awp on its PATH. Set `AWP_BIN` in the config. |
+| a notification says jq is not installed | install `jq`. |
+| no notifications | is the watcher running? The popup says. Is the daemon running under the home you expect? `AWP_HOME` must match the agents'. Is `NOTIFY` set to `none`? Then see `watch.log`. |
+| the agent is never prompted | is it bound? The popup says. Is herdr showing it `idle` or `done`? A `working` agent is prompted when it stops, and a `blocked` one never. Were the messages already read? `awp status` shows the unread count. |
+| the agent is prompted but does nothing with the messages | install the skill with `awp bootstrap`, so the agent knows how to handle them. |
+| `$awp` does not show in the sidebar | add `$awp` to the Agent sidebar row format. The token is set only while something is unread. |
+| the dashboard does not open | on a remote machine there is no browser to open. The notification has the URL. Otherwise see `web.log`. |
+| bind says there is no agent | herdr has not detected an agent in that pane yet. Wait for it to start, then bind again. |
+
+## Uninstall
+
+```bash
+herdr plugin uninstall agentwireprotocol.awp
+```
+
+This removes the plugin but leaves its config and state directories. A watcher that is still running exits when herdr's server next stops. Unbind first if you want the sidebar token cleared.
+
+## Limits
+
+- One bound agent, and one awp home, per herdr server.
+- No Windows, since awp does not run there yet.
+- The prompt goes to herdr's agent input. It relies on herdr detecting the agent's status, so it works for the harnesses herdr knows.
