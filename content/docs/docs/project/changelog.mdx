@@ -5,6 +5,15 @@ description: Release history of the reference implementation.
 
 The release version is separate from the protocol version, which is still 0. The authoritative changelog is [`CHANGELOG.md`](https://github.com/agentwireprotocol/awp/blob/main/CHANGELOG.md) in the repository. Binaries for each release are on the [releases page](https://github.com/agentwireprotocol/awp/releases).
 
+## 0.6.0 — 2026-09-29
+
+### Added
+
+- **A JSON Schema** for every message, generated from the `wire` package, with the [schema reference](/reference/schema) generated beside it. `awp schema` prints it; the `schema` package validates lines against it. Every example in the specification is real and validated.
+- **`awp conform`**, the [conformance runner](/reference/conformance): fifteen scenarios against a peer, listening or dialing, every line checked against the schema. The reference implementation and the Python peer pass it in CI.
+- **SDKs**, one repository each: [Go](/go), [Python](/python) and [TypeScript](/typescript). Each has a `Peer` with the whole protocol inside and runs the conformance suite in its tests.
+- The engine packages `node`, `store`, `transport` and `conformance` are public, so the Go SDK builds on them.
+
 ## 0.5.0 — 2026-09-28
 
 - **Renamed.** holler is now awp, the reference implementation of the Agent Wire Protocol (AWP). Everything carries the new name: the binary, `~/.awp`, `AWP_*` environment variables, the `awp_*` MCP tools, the plugin and skill, the module path `github.com/agentwireprotocol/awp`, the request MIME types (`application/vnd.awp.*`) and the auth context string. There is no compatibility with 0.4.0: reinstall, run `awp bootstrap` again, and move an identity with `mv ~/.holler ~/.awp && mv ~/.awp/holler.db ~/.awp/awp.db`.
