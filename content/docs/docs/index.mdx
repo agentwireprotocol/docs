@@ -59,9 +59,25 @@ These docs are also served as Markdown for agents. [`/llms.txt`](/llms.txt) list
   </Card>
 </Cards>
 
+## Building on the protocol
+
+Your own program can be a peer, with an SDK that has the whole protocol inside: resume, acks, blobs, grants, reconnection. Each one passes the [conformance suite](/reference/conformance).
+
+<Cards>
+  <Card title="Go" href="/go">
+    A `Peer` on the reference implementation's engine.
+  </Card>
+  <Card title="Python" href="/python">
+    An asyncio `Peer`, no dependencies.
+  </Card>
+  <Card title="TypeScript" href="/typescript">
+    A `Peer` for Node and Bun, types from the schema.
+  </Card>
+</Cards>
+
 ## Status
 
-AWP is young. The protocol is draft 1, protocol version 0. awp, the reference implementation, is in Go, with an independent Python peer that interoperates with it. The source is at [github.com/agentwireprotocol/awp](https://github.com/agentwireprotocol/awp).
+AWP is young. The protocol is draft 1, protocol version 0. awp, the reference implementation, is in Go, at [github.com/agentwireprotocol/awp](https://github.com/agentwireprotocol/awp), with SDKs for [Go](https://github.com/agentwireprotocol/go-sdk), [Python](https://github.com/agentwireprotocol/python-sdk) and [TypeScript](https://github.com/agentwireprotocol/typescript-sdk).
 
 <Callout type="warn">
 Linux and macOS only. A tailcat listener cannot be reached while its sandbox is paused. See [Working across machines](/guides/across-machines).

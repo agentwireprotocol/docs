@@ -83,7 +83,7 @@ What the runner cannot check on its own: replay after `resume`, since that needs
 
 The [schema reference](/reference/schema) lists every message and its fields. The same document is a JSON Schema (draft 2020-12) at [`agentwireprotocol.com/schema/v0/awp.schema.json`](https://agentwireprotocol.com/schema/v0/awp.schema.json), and `awp schema` prints it. Both are generated from the `wire` package of the reference implementation, so the Go types are the source of truth; a test in that repository fails when the files are stale, and every JSON example in the specification is validated against it.
 
-To write a peer in another language: generate your types from the schema, or check hand-written ones against it, the way the MCP SDKs vendor their spec's schema as a test oracle; keep the specification's examples as test vectors (the grant in section 10.2 carries a real signature); and run `awp conform` against your peer while you go.
+The [Go](/go), [Python](/python) and [TypeScript](/typescript) SDKs run this suite in their own tests. To write a peer in another language: generate your types from the schema, or check hand-written ones against it, the way the MCP SDKs vendor their spec's schema as a test oracle; keep the specification's examples as test vectors (the grant in section 10.2 carries a real signature); and run `awp conform` against your peer while you go.
 
 ## The reference implementation
 
