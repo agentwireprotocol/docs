@@ -1,6 +1,6 @@
 {
   "title": "TypeScript",
-  "description": "The TypeScript SDK for Node and Bun",
+  "description": "The TypeScript SDK",
   "icon": "FileCode",
   "root": true,
   "pages": [

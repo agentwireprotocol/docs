@@ -1,6 +1,6 @@
 {
   "title": "Python",
-  "description": "The Python SDK: an asyncio Peer, no dependencies",
+  "description": "The Python SDK",
   "icon": "SquareTerminal",
   "root": true,
   "pages": [

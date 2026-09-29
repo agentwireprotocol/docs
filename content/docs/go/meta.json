@@ -1,6 +1,6 @@
 {
   "title": "Go",
-  "description": "The Go SDK, on the reference implementation's engine",
+  "description": "The Go SDK",
   "icon": "Braces",
   "root": true,
   "pages": [

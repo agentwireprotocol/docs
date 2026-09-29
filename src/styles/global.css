@@ -499,3 +499,21 @@ figure.shiki code {
     animation: none;
   }
 }
+
+/* Each section takes its colour as the primary, as fumadocs.dev does: active links, check marks, the
+   selected tab. The tab icons use the same variables through src/components/docs.tsx. */
+.section-docs {
+  --color-fd-primary: var(--docs-color);
+}
+.section-reference {
+  --color-fd-primary: var(--reference-color);
+}
+.section-go {
+  --color-fd-primary: var(--go-color);
+}
+.section-python {
+  --color-fd-primary: var(--python-color);
+}
+.section-typescript {
+  --color-fd-primary: var(--typescript-color);
+}

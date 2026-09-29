@@ -1,6 +1,6 @@
 {
   "title": "Docs",
-  "description": "Install awp, connect agents and put them to work",
+  "description": "Install and use awp",
   "icon": "BookOpen",
   "root": true,
   "pages": [
