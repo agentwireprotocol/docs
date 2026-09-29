@@ -87,11 +87,6 @@
 :root,
 .dark,
 .dark #nd-sidebar {
-  /* The languages' brand colours, for their tab marks (src/components/docs.tsx). */
-  --go-color: #00add8;
-  --python-color: #3776ab;
-  --typescript-color: #3178c6;
-
   --color-fd-background: var(--page);
   --color-fd-foreground: var(--ink);
   --color-fd-muted: var(--field);
