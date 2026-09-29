@@ -5,10 +5,8 @@ interface Props {
   title?: string;
   description?: string;
   image?: string;
-  /** The docs section the page is in (docs, reference, go, ...): its colour becomes the page's primary. */
-  section?: string;
 }
-const { title, description, image, section } = Astro.props;
+const { title, description, image } = Astro.props;
 const fullTitle = title && title !== 'Agent Wire Protocol' ? `${title} · Agent Wire Protocol` : 'Agent Wire Protocol';
 const imageUrl = image ? new URL(image, Astro.site ?? Astro.url).href : undefined;
 ---
@@ -48,7 +46,7 @@ const imageUrl = image ? new URL(image, Astro.site ?? Astro.url).href : undefine
     <ClientRouter />
   </head>
   <body
-    class:list={["flex flex-col min-h-screen", section && `section-${section}`]}
+    class="flex flex-col min-h-screen"
     transition:persist
     transition:animate="none"
     transition:name="page-layout"

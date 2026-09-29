@@ -27,8 +27,6 @@ const slugs = typeof Astro.params.slug === "string" ? Astro.params.slug.split("/
 const docsPage = source.getPage(slugs)!;
 const image = getPageImageUrl(docsPage).url;
 const isHome = slugs.length === 0;
-// The section is the root folder: reference, go, python, typescript, else the docs.
-const section = ["reference", "go", "python", "typescript"].includes(slugs[0] ?? "") ? slugs[0] : "docs";
 
 const toc: TOCItemType[] = headings.map((heading) => ({
   depth: heading.depth,
@@ -37,7 +35,7 @@ const toc: TOCItemType[] = headings.map((heading) => ({
 }));
 ---
 
-<Layout title={page.data.title} description={page.data.description} image={image} section={section}>
+<Layout title={page.data.title} description={page.data.description} image={image}>
   <Docs
     tree={pageTree()}
     pathname={Astro.url.pathname}

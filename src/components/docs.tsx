@@ -5,20 +5,22 @@ import type { CSSProperties, ReactNode } from 'react';
 import { navigate } from 'astro:transitions/client';
 import { RootProvider } from 'fumadocs-ui/provider/astro';
 import type { AstroProviderProps } from 'fumadocs-core/framework/astro';
-import { BookOpen, Braces, FileCode, Library, SquareTerminal } from 'lucide-react';
+import { BookText, ScrollText } from 'lucide-react';
+import { SiGo, SiPython, SiTypescript } from '@icons-pack/react-simple-icons';
 import SearchDialog from './search';
 import { Logo } from './logo';
 import { PageHeader, type PageHeaderProps } from './page-header';
 
-// The sections are the root folders of content/docs, one tab each. Their
-// icons and colours live here rather than in the page tree, since React
-// nodes cannot cross the Astro island boundary inside the tree prop.
-const sections: Record<string, { icon: ReactNode; color: string }> = {
-  '/': { icon: <BookOpen />, color: 'var(--docs-color)' },
-  '/reference': { icon: <Library />, color: 'var(--reference-color)' },
-  '/go': { icon: <Braces />, color: 'var(--go-color)' },
-  '/python': { icon: <SquareTerminal />, color: 'var(--python-color)' },
-  '/typescript': { icon: <FileCode />, color: 'var(--typescript-color)' },
+// The sections are the root folders of content/docs, one tab each. The
+// languages get their own marks in their own colours; the rest plain
+// icons in the text colour. They live here rather than in the page tree,
+// since React nodes cannot cross the Astro island boundary inside it.
+const sections: Record<string, { icon: ReactNode; color?: string }> = {
+  '/': { icon: <BookText /> },
+  '/reference': { icon: <ScrollText /> },
+  '/go': { icon: <SiGo />, color: 'var(--go-color)' },
+  '/python': { icon: <SiPython />, color: 'var(--python-color)' },
+  '/typescript': { icon: <SiTypescript />, color: 'var(--typescript-color)' },
 };
 
 export const repoUrl = 'https://github.com/agentwireprotocol/awp';
@@ -49,9 +51,10 @@ export function Docs({
             if (!section) return option;
             return {
               ...option,
+              title: <span className="font-semibold tracking-[-0.01em]">{option.title}</span>,
               icon: (
                 <div
-                  className="size-full rounded-lg text-(--tab-color) [&_svg]:size-full max-md:border max-md:bg-(--tab-color)/10 max-md:p-1.5"
+                  className="size-full [&_svg]:size-full text-(--tab-color,currentColor)"
                   style={{ '--tab-color': section.color } as CSSProperties}
                 >
                   {section.icon}

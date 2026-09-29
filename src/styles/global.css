@@ -87,12 +87,10 @@
 :root,
 .dark,
 .dark #nd-sidebar {
-  /* One colour per section tab (src/components/docs.tsx). */
-  --docs-color: var(--accent);
-  --reference-color: var(--green);
-  --go-color: oklch(0.62 0.13 220);
-  --python-color: var(--orange);
-  --typescript-color: oklch(0.55 0.16 262);
+  /* The languages' brand colours, for their tab marks (src/components/docs.tsx). */
+  --go-color: #00add8;
+  --python-color: #3776ab;
+  --typescript-color: #3178c6;
 
   --color-fd-background: var(--page);
   --color-fd-foreground: var(--ink);
@@ -500,20 +498,3 @@ figure.shiki code {
   }
 }
 
-/* Each section takes its colour as the primary, as fumadocs.dev does: active links, check marks, the
-   selected tab. The tab icons use the same variables through src/components/docs.tsx. */
-.section-docs {
-  --color-fd-primary: var(--docs-color);
-}
-.section-reference {
-  --color-fd-primary: var(--reference-color);
-}
-.section-go {
-  --color-fd-primary: var(--go-color);
-}
-.section-python {
-  --color-fd-primary: var(--python-color);
-}
-.section-typescript {
-  --color-fd-primary: var(--typescript-color);
-}
